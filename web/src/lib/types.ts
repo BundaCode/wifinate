@@ -34,6 +34,7 @@ export interface Batch {
 export interface Settings {
   businessName: string; phone: string; address: string; voucherFooter: string; brandColor: string;
   codeCharset: 'numeric' | 'alpha' | 'alnum'; codeLength: number; codePrefix: string; passwordSameAsCode: boolean; printColumns: number;
+  serverUrl: string; loginTitle: string; loginWelcome: string; loginShowPrices: boolean; isolirMessage: string; paymentInfo: string;
 }
 
 export interface SalesSummary {

@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import clsx from 'clsx';
 import {
-  Plus, Router as RouterIcon, PlugZap, CheckCircle2, Trash2, Wand2, Sparkles, Cpu, Clock, ShieldCheck, ArrowLeft, ArrowRight, Cable, Globe, Wifi, Network,
+  Plus, Router as RouterIcon, PlugZap, CheckCircle2, Trash2, Wand2, Sparkles, Cpu, Clock, ShieldCheck, ArrowLeft, ArrowRight, Cable, Globe, Wifi, Network, LayoutTemplate, ShieldAlert,
 } from 'lucide-react';
 import { api, ApiError } from '@/lib/api';
 import { useRouters } from '@/lib/queries';
@@ -263,7 +263,66 @@ function PppoeWizard({ router, onClose }: { router: Router; onClose: () => void 
   );
 }
 
-function RouterCard({ r, onSetup, onPppoe }: { r: Router; onSetup: () => void; onPppoe: () => void }) {
+function PageInstallModal({ router, kind, onClose }: { router: Router; kind: 'login' | 'isolir'; onClose: () => void }) {
+  const server = useQuery({ queryKey: ['server-url'], queryFn: () => api<{ saved: string; guess: string }>('/pages/server-url') });
+  const [url, setUrl] = useState<string | null>(null);
+  const serverUrl = url ?? (server.data?.saved || server.data?.guess || '');
+  const [done, setDone] = useState(false);
+  const preview = useMutation({
+    mutationFn: () => api<{ steps: { path: string; description: string }[]; port: number }>(`/routers/${router.id}/isolir-page/preview`, { method: 'POST', json: { serverUrl } }),
+    onError: (e) => toast.error(e.message),
+  });
+  const install = useMutation({
+    mutationFn: () => kind === 'login'
+      ? api(`/routers/${router.id}/login-page/install`, { method: 'POST', json: { serverUrl } })
+      : api(`/routers/${router.id}/isolir-page/apply`, { method: 'POST', json: { serverUrl } }),
+    onSuccess: () => { setDone(true); toast.success(kind === 'login' ? 'Halaman login terpasang di router' : 'Halaman isolir aktif'); },
+    onError: (e) => toast.error(e.message, { duration: 12_000 }),
+  });
+  const isLocal = /localhost|127\.0\.0\.1/.test(serverUrl);
+  return (
+    <Modal open onClose={onClose} title={kind === 'login' ? 'Pasang halaman login hotspot' : 'Pasang halaman isolir'} description={router.name}
+      footer={done ? <Button onClick={onClose}>Tutup</Button> : <>
+        <Button variant="secondary" onClick={onClose}>Batal</Button>
+        {kind === 'isolir' && !preview.data
+          ? <Button icon={ArrowRight} loading={preview.isPending} disabled={!serverUrl} onClick={() => preview.mutate()}>Lihat rencana</Button>
+          : <Button icon={Wand2} loading={install.isPending} disabled={!serverUrl} onClick={() => install.mutate()}>Pasang sekarang</Button>}
+      </>}>
+      {done ? (
+        <div className="flex flex-col items-center py-6 text-center">
+          <span className="grid size-16 place-items-center rounded-full bg-emerald-500/10 text-emerald-600"><CheckCircle2 className="size-9" /></span>
+          <p className="mt-4 text-lg font-bold">Berhasil dipasang!</p>
+          <p className="mt-1 max-w-sm text-sm text-muted">{kind === 'login'
+            ? 'Coba sambungkan HP ke WiFi hotspot, halaman login baru akan muncul. Jika ada perubahan tampilan, klik Pasang lagi.'
+            : 'Pelanggan terisolir yang membuka website (http) akan melihat halaman tagihan.'}</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <Field label="Alamat Wifinate dari sisi router" hint="Alamat IP komputer/server Wifinate yang bisa dijangkau router, beserta port.">
+            <Input value={serverUrl} onChange={(e) => { setUrl(e.target.value); preview.reset(); }} placeholder="http://192.168.88.10:8080" />
+          </Field>
+          {isLocal && <Tip>“localhost” hanya bisa dibuka dari komputer ini. Ganti dengan <b>IP komputer Wifinate di jaringan</b>, misalnya http://192.168.88.10:8080.</Tip>}
+          {kind === 'login' ? (
+            <Tip>Router akan mengunduh halaman login dari Wifinate (<span className="font-mono">/tool/fetch</span>) dan menyimpannya di <span className="font-mono">hotspot/login.html</span>. Atur tampilannya di <b>Pengaturan → Halaman login hotspot</b>.</Tip>
+          ) : preview.data ? (
+            <ol className="space-y-2">
+              {preview.data.steps.map((st, i) => (
+                <li key={i} className="flex gap-3 rounded-xl bg-[var(--surface-2)] p-3">
+                  <span className="grid size-6 shrink-0 place-items-center rounded-full bg-brand-600 text-xs font-bold text-white">{i + 1}</span>
+                  <div><p className="text-sm">{st.description}</p><p className="mt-0.5 font-mono text-[11px] text-muted">{st.path}</p></div>
+                </li>
+              ))}
+            </ol>
+          ) : (
+            <Tip>Pelanggan yang diisolir akan diarahkan ke halaman berisi <b>nama, jumlah tagihan, dan cara bayar</b>. Halaman ini berjalan di port <b>8081</b> server Wifinate. Atur isinya di <b>Pengaturan → Halaman isolir</b>.</Tip>
+          )}
+        </div>
+      )}
+    </Modal>
+  );
+}
+
+function RouterCard({ r, onSetup, onPppoe, onPage }: { r: Router; onSetup: () => void; onPppoe: () => void; onPage: (k: 'login' | 'isolir') => void }) {
   const qc = useQueryClient();
   const info = useQuery({ queryKey: ['router-info', r.id], queryFn: () => api<RouterInfo>(`/routers/${r.id}/info`), refetchInterval: 15_000, retry: 0 });
   const del = useMutation({
@@ -310,6 +369,8 @@ function RouterCard({ r, onSetup, onPppoe }: { r: Router; onSetup: () => void; o
           <Button size="sm" variant="secondary" icon={Network} onClick={onPppoe} disabled={!online}>
             {r.pppLocalAddress ? 'Atur ulang PPPoE' : 'Siapkan PPPoE'}
           </Button>
+          {r.hotspotServer && <Button size="sm" variant="secondary" icon={LayoutTemplate} onClick={() => onPage('login')} disabled={!online}>Pasang halaman login</Button>}
+          {r.pppLocalAddress && <Button size="sm" variant="secondary" icon={ShieldAlert} onClick={() => onPage('isolir')} disabled={!online}>Pasang halaman isolir</Button>}
         </div>
       </div>
     </div>
@@ -321,6 +382,7 @@ export default function Routers() {
   const [adding, setAdding] = useState(false);
   const [setup, setSetup] = useState<Router | null>(null);
   const [pppoe, setPppoe] = useState<Router | null>(null);
+  const [page, setPage] = useState<{ r: Router; kind: 'login' | 'isolir' } | null>(null);
   return (
     <>
       <PageHeader title="Router" description="Hubungkan MikroTik Anda. Bisa lebih dari satu lokasi."
@@ -331,11 +393,12 @@ export default function Routers() {
             action={<Button icon={Plus} onClick={() => setAdding(true)}>Tambah router</Button>} />
         </div>
       ) : (
-        <div className="grid gap-4 xl:grid-cols-2">{data.map((r) => <RouterCard key={r.id} r={r} onSetup={() => setSetup(r)} onPppoe={() => setPppoe(r)} />)}</div>
+        <div className="grid gap-4 xl:grid-cols-2">{data.map((r) => <RouterCard key={r.id} r={r} onSetup={() => setSetup(r)} onPppoe={() => setPppoe(r)} onPage={(kind) => setPage({ r, kind })} />)}</div>
       )}
       <AddRouter open={adding} onClose={() => setAdding(false)} />
       {setup && <HotspotWizard router={setup} onClose={() => setSetup(null)} />}
       {pppoe && <PppoeWizard router={pppoe} onClose={() => setPppoe(null)} />}
+      {page && <PageInstallModal router={page.r} kind={page.kind} onClose={() => setPage(null)} />}
     </>
   );
 }

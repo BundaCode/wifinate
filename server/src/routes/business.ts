@@ -49,6 +49,9 @@ export default async function businessRoutes(app: FastifyInstance) {
       brandColor: z.string().regex(/^#[0-9a-f]{6}$/i), codeCharset: z.enum(['numeric', 'alpha', 'alnum']),
       codeLength: z.coerce.number().int().min(4).max(16), codePrefix: z.string().max(6).regex(/^[A-Za-z0-9-]*$/),
       passwordSameAsCode: z.boolean(), printColumns: z.coerce.number().int().min(2).max(6),
+      serverUrl: z.string().max(200).refine((v) => v === '' || /^https?:\/\/[^/\s]+$/.test(v.replace(/\/$/, '')), 'Contoh: http://192.168.88.10:8080'),
+      loginTitle: z.string().max(60), loginWelcome: z.string().max(200), loginShowPrices: z.boolean(),
+      isolirMessage: z.string().max(500), paymentInfo: z.string().max(500),
     }).partial().parse(req.body);
     return saveSettings(body);
   });

@@ -15,6 +15,14 @@ export interface AppSettings {
   passwordSameAsCode: boolean;
   /** Jumlah kolom kartu per baris pada lembar A4. */
   printColumns: number;
+  /** Alamat Wifinate yang bisa dijangkau router, mis. http://192.168.88.10:8080 */
+  serverUrl: string;
+  loginTitle: string;
+  loginWelcome: string;
+  loginShowPrices: boolean;
+  isolirMessage: string;
+  /** Info pembayaran: rekening, e-wallet, dsb. */
+  paymentInfo: string;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -28,6 +36,12 @@ export const DEFAULT_SETTINGS: AppSettings = {
   codePrefix: '',
   passwordSameAsCode: true,
   printColumns: 4,
+  serverUrl: '',
+  loginTitle: 'Selamat datang',
+  loginWelcome: 'Masukkan kode voucher untuk mulai internetan.',
+  loginShowPrices: true,
+  isolirMessage: 'Layanan internet Anda sementara dihentikan karena ada tagihan yang belum dibayar. Silakan lakukan pembayaran agar internet aktif kembali secara otomatis.',
+  paymentInfo: '',
 };
 
 export function getSettings(): AppSettings {

@@ -13,6 +13,7 @@ import authRoutes from './routes/auth.js';
 import routerRoutes from './routes/routers.js';
 import businessRoutes from './routes/business.js';
 import pppoeRoutes, { trafficWs } from './routes/pppoe.js';
+import pageRoutes, { startIsolirServer } from './routes/pages.js';
 import { startScheduler } from './services/scheduler.js';
 
 const app = Fastify({
@@ -44,6 +45,7 @@ await app.register(routerRoutes);
 await app.register(businessRoutes);
 await app.register(pppoeRoutes);
 await app.register(trafficWs);
+await app.register(pageRoutes);
 
 // Produksi: server sekaligus menyajikan tampilan web hasil build Vite.
 const webDist = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../web/dist');
@@ -56,6 +58,7 @@ if (fs.existsSync(webDist)) {
 }
 
 startScheduler((m) => app.log.info(m));
+await startIsolirServer((m) => app.log.info(m));
 
 await app.listen({ port: PORT, host: HOST });
 app.log.info(`Wifinate siap di http://localhost:${PORT}`);

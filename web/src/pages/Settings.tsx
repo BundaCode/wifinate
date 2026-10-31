@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import clsx from 'clsx';
-import { Save, Store, Ticket, Users, Plus, Trash2 } from 'lucide-react';
+import { Save, Store, Ticket, Users, Plus, Trash2, LogIn, ShieldAlert, Download } from 'lucide-react';
+import PagePreview from '@/components/PagePreview';
+import { openFile } from '@/lib/api';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { useSettings } from '@/lib/queries';
@@ -128,6 +130,39 @@ export default function Settings() {
           <div className="rounded-xl bg-[var(--surface-2)] p-4">
             <p className="text-xs font-semibold text-muted">Contoh kode</p>
             <p className="mt-1 font-mono text-2xl font-bold tracking-widest">{sampleCode(s)}</p>
+          </div>
+        </Section>
+
+        <Section icon={LogIn} title="Halaman login hotspot" description="Tampilan yang muncul saat pelanggan konek WiFi. Pasang ke router lewat menu Router → Pasang halaman login.">
+          <div className="grid gap-6 xl:grid-cols-[1fr_300px]">
+            <div className="space-y-4">
+              <Field label="Judul"><Input value={s.loginTitle} maxLength={60} onChange={(e) => set('loginTitle', e.target.value)} /></Field>
+              <Field label="Kalimat sambutan"><Input value={s.loginWelcome} maxLength={200} onChange={(e) => set('loginWelcome', e.target.value)} /></Field>
+              <Field label="Warna utama" hint="Dipakai di halaman login dan kartu voucher.">
+                <div className="flex flex-wrap items-center gap-2">
+                  {['#4f46e5', '#0ea5e9', '#059669', '#d97706', '#dc2626', '#db2777', '#7c3aed', '#0f172a'].map((c) => (
+                    <button key={c} type="button" onClick={() => set('brandColor', c)} className={clsx('size-9 rounded-full ring-offset-2 ring-offset-[var(--surface)]', s.brandColor === c && 'ring-2 ring-[var(--text)]')} style={{ background: c }} />
+                  ))}
+                  <input type="color" value={s.brandColor} onChange={(e) => set('brandColor', e.target.value)} className="size-9 cursor-pointer rounded-full border-0 bg-transparent" title="Warna lain" />
+                </div>
+              </Field>
+              <Toggle checked={s.loginShowPrices} onChange={(v) => set('loginShowPrices', v)} label="Tampilkan daftar harga voucher" description="Diambil otomatis dari menu Paket voucher." />
+              <p className="text-xs text-muted">Nomor WhatsApp dari profil usaha dipakai untuk tombol “Beli voucher via WhatsApp”.</p>
+              <Button variant="secondary" icon={Download} onClick={() => openFile('/pages/login/download', { download: 'login.html' })}>Unduh login.html (pasang manual)</Button>
+            </div>
+            <PagePreview kind="login" draft={s as unknown as Record<string, unknown>} />
+          </div>
+        </Section>
+
+        <Section icon={ShieldAlert} title="Halaman isolir PPPoE" description="Muncul saat pelanggan yang diisolir membuka website. Nama & jumlah tagihan pelanggan tampil otomatis.">
+          <div className="grid gap-6 xl:grid-cols-[1fr_300px]">
+            <div className="space-y-4">
+              <Field label="Pesan"><textarea className="input h-28 py-3" value={s.isolirMessage} maxLength={500} onChange={(e) => set('isolirMessage', e.target.value)} /></Field>
+              <Field label="Cara pembayaran" hint="Contoh: BCA 1234567890 a.n. Budi • DANA 0812xxxx">
+                <textarea className="input h-28 py-3" value={s.paymentInfo} maxLength={500} onChange={(e) => set('paymentInfo', e.target.value)} placeholder={'BCA 1234567890 a.n. Budi\nDANA / OVO 0812xxxx'} />
+              </Field>
+            </div>
+            <PagePreview kind="isolir" draft={s as unknown as Record<string, unknown>} />
           </div>
         </Section>
 

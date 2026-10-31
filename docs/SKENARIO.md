@@ -65,11 +65,26 @@ Penjadwal berjalan tiap 30 detik: mencatat aktivasi, memperbarui pemakaian, meng
 
 Catatan: aturan firewall isolir ditambahkan di akhir daftar filter. Jika router punya aturan `accept` umum di chain forward sebelumnya, pindahkan aturan `wifinate:pppoe blokir isolir` ke atas.
 
-## Rencana tahap berikutnya
+## Halaman login & isolir (Tahap 2b — sudah tersedia)
 
-### Tahap 2b — sisa
-- Editor halaman login hotspot (logo, warna, daftar harga) yang di-upload ke router.
-- Halaman informasi “Anda terisolir, silakan bayar” untuk pelanggan yang diisolir.
+**Halaman login hotspot**
+1. **Pengaturan → Halaman login hotspot**: ubah judul, sapaan, warna, tampilkan daftar harga. Preview tampil langsung.
+2. **Router → Pasang halaman login**: isi alamat Wifinate yang bisa dijangkau router (mis. `http://192.168.88.10:8080`).
+   Router menjalankan `/tool/fetch` dan menyimpan ke `hotspot/login.html`.
+3. Alternatif: **Unduh login.html** lalu seret ke folder `hotspot` lewat Winbox → Files.
+
+Login memakai CHAP dengan `md5.js` bawaan router bila ada, jika tidak memakai PAP. QR code di voucher tetap bisa login otomatis.
+
+**Halaman isolir PPPoE**
+1. **Pengaturan → Halaman isolir PPPoE**: isi pesan & cara pembayaran (rekening/e-wallet).
+2. **Router → Pasang halaman isolir** (setelah wizard PPPoE): menambahkan
+   - filter `accept` agar pelanggan terisolir boleh membuka server Wifinate port 8081 (diletakkan di atas aturan blokir), dan
+   - `dst-nat` yang mengarahkan akses web (http, port 80) pelanggan terisolir ke halaman isolir.
+3. Halaman isolir mengenali pelanggan dari IP PPPoE-nya, lalu menampilkan nama dan jumlah tagihan.
+
+Keterbatasan: situs **https** tidak bisa dialihkan (browser akan menampilkan gagal memuat). Banyak HP otomatis mengecek koneksi lewat http, sehingga halaman isolir biasanya tetap muncul.
+
+## Rencana tahap berikutnya
 
 ### Tahap 3 — Jaringan kantor & multi-lokasi
 - Wizard **LAN kantor**: bagi jaringan per divisi (VLAN/IP), DHCP, dan bandwidth (simple queue / PCQ), contoh: Keuangan 10 Mbps, Marketing 20 Mbps, Tamu 5 Mbps.

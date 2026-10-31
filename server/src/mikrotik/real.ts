@@ -215,7 +215,18 @@ export class RealDriver implements RouterDriver {
   }
 
   async apply(cmds: RosCommand[]) {
-    for (const c of cmds) await this.run(c.path, c.params);
+    for (const c of cmds) {
+      const params = { ...c.params };
+      // "place-before=comment:<teks>" → cari aturan dengan komentar itu agar urutan firewall benar.
+      const pb = params['place-before'];
+      if (pb?.startsWith('comment:')) {
+        const base = c.path.replace(/\/add$/, '');
+        const rows = await this.run(`${base}/print`, [`?comment=${pb.slice(8)}`, '=.proplist=.id']);
+        if (rows[0]) params['place-before'] = rows[0]['.id'];
+        else delete params['place-before'];
+      }
+      await this.run(c.path, params);
+    }
   }
 
   async close() {
