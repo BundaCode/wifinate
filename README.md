@@ -49,7 +49,7 @@ Port `8081` dipakai untuk halaman isolir pelanggan PPPoE.
 
 ### Untuk pengembangan
 
-Butuh Node.js 20+.
+Butuh Node.js 22+.
 
 ```bash
 npm install
@@ -61,7 +61,7 @@ npm run dev
 
 ### Tanpa Docker (Windows / Linux / macOS)
 
-Butuh **Node.js 20 atau lebih baru** ([nodejs.org](https://nodejs.org), pilih versi LTS).
+Butuh **Node.js 22 atau lebih baru** ([nodejs.org](https://nodejs.org), pilih versi LTS).
 Buka terminal (Windows: PowerShell) di folder proyek, lalu:
 
 ```bash

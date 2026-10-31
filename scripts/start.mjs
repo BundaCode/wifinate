@@ -9,6 +9,12 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const serverEntry = join(root, 'server', 'dist', 'index.js');
 const webIndex = join(root, 'web', 'dist', 'index.html');
 
+const major = Number(process.versions.node.split('.')[0]);
+if (major < 22) {
+  console.error(`\n❌ Wifinate butuh Node.js 22 atau lebih baru (terpasang: ${process.versions.node}). Unduh di https://nodejs.org\n`);
+  process.exit(1);
+}
+
 if (!existsSync(join(root, 'node_modules'))) {
   console.error('\n❌ Dependensi belum terpasang. Jalankan dulu:  npm install\n');
   process.exit(1);
