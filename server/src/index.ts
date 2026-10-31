@@ -14,6 +14,7 @@ import routerRoutes from './routes/routers.js';
 import businessRoutes from './routes/business.js';
 import pppoeRoutes, { trafficWs } from './routes/pppoe.js';
 import pageRoutes, { startIsolirServer } from './routes/pages.js';
+import lanRoutes from './routes/lan.js';
 import { startScheduler } from './services/scheduler.js';
 
 const app = Fastify({
@@ -46,6 +47,7 @@ await app.register(businessRoutes);
 await app.register(pppoeRoutes);
 await app.register(trafficWs);
 await app.register(pageRoutes);
+await app.register(lanRoutes);
 
 // Produksi: server sekaligus menyajikan tampilan web hasil build Vite.
 const webDist = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../web/dist');

@@ -21,6 +21,7 @@ Aplikasi web untuk mengelola **bisnis WiFi voucher (hotspot) & PPPoE MikroTik**.
 | 🚫 **Halaman isolir** | Pelanggan terisolir yang membuka website melihat **nama, jumlah tagihan, dan cara bayar** + tombol WA. |
 | 🧙 **Wizard server PPPoE** | Pool IP, profil, server PPPoE, profil & firewall isolir, NAT — dengan preview & backup otomatis. |
 | 📡 **Monitor** | **Grafik trafik live** per port (WebSocket, tiap detik), pelanggan hotspot & PPPoE yang sedang online. |
+| 🏢 **Jaringan kantor** | Wizard bagi jaringan per divisi (port sendiri / VLAN), DHCP otomatis, batas internet dibagi rata (PCQ), isolasi tamu, pemakaian live per divisi, ubah batas & hapus kapan saja. Gagal di tengah? Otomatis dibatalkan. |
 | 👥 **Multi pengguna** | Admin (akses penuh) & kasir (buat/cetak voucher, terima pembayaran). |
 | 🧪 **Router demo** | Coba semua fitur tanpa MikroTik asli. |
 

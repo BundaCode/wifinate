@@ -13,6 +13,7 @@ const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Vouchers = lazy(() => import('./pages/Vouchers'));
 const Packages = lazy(() => import('./pages/Packages'));
 const Customers = lazy(() => import('./pages/Customers'));
+const Office = lazy(() => import('./pages/Office'));
 const Monitor = lazy(() => import('./pages/Monitor'));
 const Reports = lazy(() => import('./pages/Reports'));
 const Routers = lazy(() => import('./pages/Routers'));
@@ -40,6 +41,7 @@ function AppRoutes() {
           <Route path="pelanggan" element={<Customers />} />
           <Route path="monitor" element={<Monitor />} />
           <Route path="laporan" element={<Reports />} />
+          {user.role === 'admin' && <Route path="kantor" element={<Office />} />}
           {user.role === 'admin' && <Route path="router" element={<Routers />} />}
           {user.role === 'admin' && <Route path="pengaturan" element={<SettingsPage />} />}
           <Route path="*" element={<Navigate to="/" replace />} />

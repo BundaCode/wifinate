@@ -3,7 +3,7 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import clsx from 'clsx';
 import {
   LayoutDashboard, Ticket, Package as PackageIcon, Activity, BarChart3, Router as RouterIcon, Settings,
-  LogOut, Moon, Sun, Menu, X, Wifi, Users,
+  LogOut, Moon, Sun, Menu, X, Wifi, Users, Building2,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { useTheme } from '@/lib/theme';
@@ -15,6 +15,7 @@ const nav = [
   { to: '/paket', label: 'Paket Voucher', icon: PackageIcon },
   { to: '/monitor', label: 'Monitor', icon: Activity, mobile: true },
   { to: '/laporan', label: 'Laporan', icon: BarChart3, mobile: true },
+  { to: '/kantor', label: 'Jaringan Kantor', icon: Building2, admin: true },
   { to: '/router', label: 'Router', icon: RouterIcon, admin: true },
   { to: '/pengaturan', label: 'Pengaturan', icon: Settings, admin: true },
 ];

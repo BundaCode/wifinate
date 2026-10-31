@@ -84,10 +84,22 @@ Login memakai CHAP dengan `md5.js` bawaan router bila ada, jika tidak memakai PA
 
 Keterbatasan: situs **https** tidak bisa dialihkan (browser akan menampilkan gagal memuat). Banyak HP otomatis mengecek koneksi lewat http, sehingga halaman isolir biasanya tetap muncul.
 
+## Jaringan kantor (Tahap 3 — sudah tersedia)
+
+Menu **Jaringan Kantor → Buat jaringan kantor**:
+1. Pilih port internet (WAN).
+2. Tambah divisi (pilihan cepat: Keuangan, Marketing, Operasional, Direksi, Tamu). Per divisi:
+   - **Port sendiri** (1 port router = 1 divisi) atau **VLAN** (butuh switch manageable),
+   - batas internet (upload otomatis setengahnya), dibagi rata ke semua perangkat (PCQ),
+   - jaringan (otomatis 192.168.10, .20, …),
+   - **isolasi** dari divisi lain (cocok untuk tamu).
+3. Preview → backup → terapkan. Jika satu langkah gagal, semua yang sempat dibuat untuk divisi tersebut **dihapus otomatis** (router kembali seperti semula).
+
+Setiap item di router diberi komentar `wifinate:lan:<divisi>`, sehingga **Hapus divisi** membersihkan semuanya dengan rapi.
+Catatan: RouterOS API tidak mendukung *Safe Mode* Winbox; sebagai gantinya Wifinate memakai backup + pembatalan otomatis.
+
 ## Rencana tahap berikutnya
 
 ### Tahap 3 — Jaringan kantor & multi-lokasi
-- Wizard **LAN kantor**: bagi jaringan per divisi (VLAN/IP), DHCP, dan bandwidth (simple queue / PCQ), contoh: Keuangan 10 Mbps, Marketing 20 Mbps, Tamu 5 Mbps.
-- Preview + backup + safe mode untuk setiap perubahan.
 - Akun reseller dengan saldo deposit.
 - Notifikasi WhatsApp (stok voucher menipis, router offline).

@@ -147,3 +147,21 @@ export const invoices = sqliteTable('invoices', {
   receivedBy: integer('received_by'),
   createdAt: integer('created_at').notNull(),
 });
+
+// ---------- Jaringan kantor (tahap 3) ----------
+
+export const lanNetworks = sqliteTable('lan_networks', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  routerId: integer('router_id').notNull(),
+  name: text('name').notNull(),
+  slug: text('slug').notNull(),
+  mode: text('mode', { enum: ['port', 'vlan'] }).notNull(),
+  /** Port fisik (mode port) atau port trunk (mode vlan). */
+  iface: text('iface').notNull(),
+  vlanId: integer('vlan_id'),
+  prefix: text('prefix').notNull(),
+  rateDown: text('rate_down'),
+  rateUp: text('rate_up'),
+  isolate: integer('isolate', { mode: 'boolean' }).notNull().default(false),
+  createdAt: integer('created_at').notNull(),
+});

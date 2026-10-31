@@ -151,6 +151,24 @@ const migrations: string[] = [
   CREATE UNIQUE INDEX invoices_customer_period ON invoices(customer_id, period);
   CREATE INDEX invoices_status ON invoices(status, due_at);
   `,
+  // Tahap 3: jaringan kantor
+  `
+  CREATE TABLE lan_networks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    router_id INTEGER NOT NULL REFERENCES routers(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    slug TEXT NOT NULL,
+    mode TEXT NOT NULL,
+    iface TEXT NOT NULL,
+    vlan_id INTEGER,
+    prefix TEXT NOT NULL,
+    rate_down TEXT,
+    rate_up TEXT,
+    isolate INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL
+  );
+  CREATE UNIQUE INDEX lan_router_slug ON lan_networks(router_id, slug);
+  `,
 ];
 
 function migrate() {

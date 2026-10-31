@@ -30,6 +30,11 @@ export function getDriver(r: RouterRow): RouterDriver {
     const rows = db.select().from(schema.vouchers)
       .where(and(eq(schema.vouchers.routerId, r.id), inArray(schema.vouchers.status, ['new', 'active']))).all();
     driver.seed(rows.map((v) => ({ name: v.code, password: v.password, uptimeSec: v.uptimeSec })));
+    const lan = db.select().from(schema.lanNetworks).where(eq(schema.lanNetworks.routerId, r.id)).all();
+    driver.apply(lan.filter((d) => d.rateDown || d.rateUp).map((d) => ({
+      path: '/queue/simple/add', description: '',
+      params: { name: `lan-${d.slug}`, target: `${d.prefix}.0/24`, 'max-limit': `${d.rateUp ?? '0'}/${d.rateDown ?? '0'}`, comment: `wifinate:lan:${d.slug}` },
+    })));
   }
   drivers.set(r.id, { driver, key });
   return driver;

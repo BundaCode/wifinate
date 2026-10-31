@@ -1,11 +1,13 @@
 import type {
-  ActiveSession, HotspotUserInput, HotspotUserStat, PppActive, PppSecret, RosCommand, RouterDriver, RouterInfo,
-  RouterInterface, TrafficSample,
+  ActiveSession, HotspotUserInput, HotspotUserStat, PppActive, PppSecret, RouterDriver, RouterInfo,
+  RouterInterface, TrafficSample, QueueStat, RosCommand as Cmd,
 } from './types.js';
 
 interface DemoUser extends HotspotUserInput { uptimeSec: number; bytes: number; online: boolean; mac: string; ip: string }
 
 const states = new Map<number, Map<string, DemoUser>>();
+/** Antrian (simple queue) yang "dibuat" di router demo, agar halaman jaringan kantor bisa dicoba. */
+const queueStates = new Map<number, Map<string, { target: string; maxLimit: string; comment: string; bytesUp: number; bytesDown: number }>>();
 const pppStates = new Map<number, Map<string, PppSecret & { online: boolean; since: number; ip: string }>>();
 
 /** Contoh pelanggan PPPoE yang sudah ada di router demo (untuk mencoba fitur impor). */
@@ -153,7 +155,37 @@ export class DemoDriver implements RouterDriver {
     return { rx: Math.round(rx), tx: Math.round(tx) };
   }
 
+  private get queues() {
+    if (!queueStates.has(this.routerId)) queueStates.set(this.routerId, new Map());
+    return queueStates.get(this.routerId)!;
+  }
+
+  async queueStats(): Promise<QueueStat[]> {
+    return [...this.queues.entries()].map(([name, q]) => {
+      const [maxUp, maxDown] = q.maxLimit.split('/').map((v) => parseFloat(v) * (/k$/i.test(v) ? 1e3 : 1e6) || 10e6);
+      const load = 0.25 + Math.random() * 0.6;
+      const rateDown = Math.round(maxDown * load);
+      const rateUp = Math.round(maxUp * load * 0.4);
+      q.bytesDown += rateDown / 8 * 3;
+      q.bytesUp += rateUp / 8 * 3;
+      return { name, target: q.target, rateUp, rateDown, bytesUp: Math.round(q.bytesUp), bytesDown: Math.round(q.bytesDown), maxLimit: q.maxLimit };
+    });
+  }
+
+  async removeByComment(path: string, comment: string) {
+    if (path !== '/queue/simple') return 0;
+    let n = 0;
+    for (const [k, q] of this.queues) if (q.comment === comment) { this.queues.delete(k); n++; }
+    return n;
+  }
+
   async backup() {}
-  async apply(_cmds: RosCommand[]) {}
+  async apply(cmds: Cmd[]) {
+    for (const c of cmds) {
+      if (c.path === '/queue/simple/add') {
+        this.queues.set(c.params.name, { target: c.params.target, maxLimit: c.params['max-limit'] ?? '0/0', comment: c.params.comment ?? '', bytesUp: 0, bytesDown: 0 });
+      }
+    }
+  }
   async close() {}
 }

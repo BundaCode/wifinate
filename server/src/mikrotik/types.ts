@@ -68,6 +68,17 @@ export interface PppProfileInput {
 
 export interface TrafficSample { rx: number; tx: number }
 
+export interface QueueStat {
+  name: string;
+  target: string;
+  /** bit/detik */
+  rateUp: number;
+  rateDown: number;
+  bytesUp: number;
+  bytesDown: number;
+  maxLimit: string;
+}
+
 /** Satu perintah RouterOS beserta penjelasan untuk orang awam. */
 export interface RosCommand {
   path: string; // contoh: /ip/address/add
@@ -93,6 +104,9 @@ export interface RouterDriver {
   pppSecrets(): Promise<PppSecret[]>;
   /** Kecepatan trafik saat ini pada interface (bit per detik). */
   monitorTraffic(iface: string): Promise<TrafficSample>;
+  queueStats(): Promise<QueueStat[]>;
+  /** Hapus semua item pada path (mis. /ip/address) yang komentarnya persis sama. */
+  removeByComment(path: string, comment: string): Promise<number>;
   backup(name: string): Promise<void>;
   apply(cmds: RosCommand[]): Promise<void>;
   close(): Promise<void>;

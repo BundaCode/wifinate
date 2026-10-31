@@ -1,7 +1,7 @@
 import { RouterOSAPI } from 'node-routeros';
 import type {
   ActiveSession, HotspotUserInput, HotspotUserStat, PppActive, PppProfileInput, PppSecret, RosCommand, RouterDriver, RouterInfo,
-  RouterInterface, TrafficSample,
+  RouterInterface, TrafficSample, QueueStat,
 } from './types.js';
 
 type Row = Record<string, string>;
@@ -208,6 +208,22 @@ export class RealDriver implements RouterDriver {
   async monitorTraffic(iface: string): Promise<TrafficSample> {
     const [r] = await this.run('/interface/monitor-traffic', [`=interface=${iface}`, '=once=']);
     return { rx: Number(r?.['rx-bits-per-second'] ?? 0), tx: Number(r?.['tx-bits-per-second'] ?? 0) };
+  }
+
+  async queueStats(): Promise<QueueStat[]> {
+    const rows = await this.run('/queue/simple/print', ['=.proplist=name,target,rate,bytes,max-limit']);
+    const pair = (v?: string) => (v ?? '0/0').split('/').map(Number);
+    return rows.map((r) => {
+      const [ru, rd] = pair(r.rate);
+      const [bu, bd] = pair(r.bytes);
+      return { name: r.name, target: r.target, rateUp: ru, rateDown: rd, bytesUp: bu, bytesDown: bd, maxLimit: r['max-limit'] ?? '' };
+    });
+  }
+
+  async removeByComment(path: string, comment: string): Promise<number> {
+    const rows = await this.run(`${path}/print`, [`?comment=${comment}`, '=.proplist=.id']);
+    if (rows.length) await this.run(`${path}/remove`, { '.id': rows.map((r) => r['.id']).join(',') });
+    return rows.length;
   }
 
   async backup(name: string) {
