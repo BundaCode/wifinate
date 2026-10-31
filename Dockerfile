@@ -1,7 +1,7 @@
 # ---- build ----
 FROM node:22-bookworm-slim AS build
 WORKDIR /app
-COPY package.json package-lock.json ./
+COPY package.json package-lock.json .npmrc ./
 COPY server/package.json server/
 COPY web/package.json web/
 RUN npm ci

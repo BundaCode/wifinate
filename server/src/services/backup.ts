@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import zlib from 'node:zlib';
 import crypto from 'node:crypto';
-import Database from 'better-sqlite3';
+import Database from '../sqlite.js';
 import { BACKUP_DIR, DATA_DIR } from '../config.js';
 import { sqlite } from '../db.js';
 

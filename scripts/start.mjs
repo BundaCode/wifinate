@@ -9,9 +9,9 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const serverEntry = join(root, 'server', 'dist', 'index.js');
 const webIndex = join(root, 'web', 'dist', 'index.html');
 
-const major = Number(process.versions.node.split('.')[0]);
-if (major < 22) {
-  console.error(`\n❌ Wifinate butuh Node.js 22 atau lebih baru (terpasang: ${process.versions.node}). Unduh di https://nodejs.org\n`);
+const [major, minor] = process.versions.node.split('.').map(Number);
+if (major < 22 || (major === 22 && minor < 16)) {
+  console.error(`\n❌ Wifinate butuh Node.js 22.16 atau lebih baru (terpasang: ${process.versions.node}). Unduh versi LTS di https://nodejs.org\n`);
   process.exit(1);
 }
 

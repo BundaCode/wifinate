@@ -33,7 +33,7 @@ Rencana tahap berikutnya ada di [docs/SKENARIO.md](docs/SKENARIO.md).
 
 - **Frontend:** Vite + React + TypeScript, Tailwind CSS, TanStack Query, Recharts
 - **Backend:** Node.js + Fastify + TypeScript
-- **Database:** SQLite (mode WAL) + Drizzle ORM
+- **Database:** SQLite bawaan Node.js (`node:sqlite`, mode WAL) + Drizzle ORM — tanpa modul native, jadi `npm install` lancar di Windows tanpa Visual Studio Build Tools
 - **MikroTik:** RouterOS API (port 8728 / API-SSL 8729)
 
 ## Menjalankan
@@ -49,7 +49,7 @@ Port `8081` dipakai untuk halaman isolir pelanggan PPPoE.
 
 ### Untuk pengembangan
 
-Butuh Node.js 22+.
+Butuh Node.js 22.16+.
 
 ```bash
 npm install
@@ -61,7 +61,7 @@ npm run dev
 
 ### Tanpa Docker (Windows / Linux / macOS)
 
-Butuh **Node.js 22 atau lebih baru** ([nodejs.org](https://nodejs.org), pilih versi LTS).
+Butuh **Node.js 22.16 atau lebih baru** ([nodejs.org](https://nodejs.org), pilih versi LTS).
 Buka terminal (Windows: PowerShell) di folder proyek, lalu:
 
 ```bash

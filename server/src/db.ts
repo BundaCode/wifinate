@@ -1,5 +1,8 @@
-import Database from 'better-sqlite3';
-import { drizzle } from 'drizzle-orm/better-sqlite3';
+import Database from './sqlite.js';
+import { BaseSQLiteDatabase, SQLiteSyncDialect } from 'drizzle-orm/sqlite-core';
+import { BetterSQLiteSession } from 'drizzle-orm/better-sqlite3/session';
+import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
+import { createTableRelationsHelpers, extractTablesRelationalConfig } from 'drizzle-orm/relations';
 import { DB_PATH } from './config.js';
 import * as schema from './schema.js';
 
@@ -222,5 +225,17 @@ function migrate() {
 
 migrate();
 
-export const db = drizzle(sqlite, { schema });
+/**
+ * Drizzle dirakit manual dari sesi "better-sqlite3" (tanpa mengimpor modul native better-sqlite3).
+ * Database di ./sqlite.ts meniru API better-sqlite3 di atas node:sqlite bawaan Node.js.
+ */
+function createDb() {
+  const dialect = new SQLiteSyncDialect();
+  const rel = extractTablesRelationalConfig(schema, createTableRelationsHelpers);
+  const relSchema = { fullSchema: schema, schema: rel.tables, tableNamesMap: rel.tableNamesMap };
+  const session = new BetterSQLiteSession(sqlite as never, dialect, relSchema as never, {});
+  return new BaseSQLiteDatabase('sync', dialect, session as never, relSchema as never) as unknown as BetterSQLite3Database<typeof schema>;
+}
+
+export const db = createDb();
 export { schema };
