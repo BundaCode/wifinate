@@ -59,12 +59,31 @@ npm run dev
 - Web: http://localhost:5173 (otomatis meneruskan `/api` ke server)
 - Server API: http://localhost:8080
 
-### Build produksi tanpa Docker
+### Tanpa Docker (Windows / Linux / macOS)
+
+Butuh **Node.js 20 atau lebih baru** ([nodejs.org](https://nodejs.org), pilih versi LTS).
+Buka terminal (Windows: PowerShell) di folder proyek, lalu:
 
 ```bash
 npm install
-npm run build
 npm start
+```
+
+`npm start` otomatis membangun aplikasi saat pertama kali (±1 menit), lalu menjalankannya.
+Buka `http://localhost:8080` di browser. Data tersimpan di folder `server/data`.
+
+Setelah memperbarui kode (mis. unduh versi baru), bangun ulang dengan:
+
+```bash
+npm run build
+```
+
+Agar tetap jalan setelah terminal ditutup / komputer restart, gunakan pengelola proses, contoh `pm2`:
+
+```bash
+npm install -g pm2
+pm2 start scripts/start.mjs --name wifinate
+pm2 save
 ```
 
 ## Persiapan di MikroTik
