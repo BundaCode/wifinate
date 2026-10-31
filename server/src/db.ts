@@ -100,6 +100,57 @@ const migrations: string[] = [
   CREATE INDEX sales_router ON sales(router_id, sold_at);
   CREATE INDEX sales_package ON sales(package_id, sold_at);
   `,
+  // Tahap 2: PPPoE, pelanggan, tagihan
+  `
+  ALTER TABLE routers ADD COLUMN ppp_local_address TEXT;
+  ALTER TABLE routers ADD COLUMN ppp_pool TEXT;
+  ALTER TABLE sales ADD COLUMN customer_id INTEGER;
+  ALTER TABLE sales ADD COLUMN invoice_id INTEGER;
+  CREATE INDEX sales_channel ON sales(channel, sold_at);
+  CREATE TABLE ppp_plans (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    price INTEGER NOT NULL,
+    rate_down TEXT,
+    rate_up TEXT,
+    color TEXT NOT NULL DEFAULT '#0ea5e9',
+    active INTEGER NOT NULL DEFAULT 1,
+    created_at INTEGER NOT NULL
+  );
+  CREATE TABLE customers (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    router_id INTEGER NOT NULL REFERENCES routers(id) ON DELETE CASCADE,
+    plan_id INTEGER NOT NULL REFERENCES ppp_plans(id),
+    name TEXT NOT NULL,
+    phone TEXT,
+    address TEXT,
+    username TEXT NOT NULL,
+    password_enc TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'active',
+    next_due_at INTEGER NOT NULL,
+    grace_days INTEGER NOT NULL DEFAULT 3,
+    auto_isolate INTEGER NOT NULL DEFAULT 1,
+    note TEXT,
+    last_paid_at INTEGER,
+    sync_error TEXT,
+    created_at INTEGER NOT NULL
+  );
+  CREATE UNIQUE INDEX customers_router_username ON customers(router_id, username);
+  CREATE TABLE invoices (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    customer_id INTEGER NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+    period TEXT NOT NULL,
+    amount INTEGER NOT NULL,
+    due_at INTEGER NOT NULL,
+    status TEXT NOT NULL DEFAULT 'unpaid',
+    paid_at INTEGER,
+    method TEXT,
+    received_by INTEGER,
+    created_at INTEGER NOT NULL
+  );
+  CREATE UNIQUE INDEX invoices_customer_period ON invoices(customer_id, period);
+  CREATE INDEX invoices_status ON invoices(status, due_at);
+  `,
 ];
 
 function migrate() {

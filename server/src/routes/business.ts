@@ -186,10 +186,10 @@ export default async function businessRoutes(app: FastifyInstance) {
     const esc = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
     const tz = f.tzOffsetMin * 60_000;
     const lines = [
-      ['Waktu', 'Kode Voucher', 'Paket', 'Router', 'Jenis', 'Nominal', 'Status', 'MAC'].join(';'),
+      ['Waktu', 'Kode / Username', 'Pelanggan', 'Paket', 'Router', 'Jenis', 'Nominal', 'Status', 'MAC'].join(';'),
       ...(rows as Record<string, unknown>[]).map((r) => [
         new Date(Number(r.soldAt) + tz).toISOString().replace('T', ' ').slice(0, 19),
-        r.code, r.packageName, r.routerName, r.channel, r.amount, r.status, r.mac,
+        r.code, r.customerName, r.packageName, r.routerName, r.channel === 'pppoe' ? 'PPPoE' : 'Voucher', r.amount, r.status, r.mac,
       ].map(esc).join(';')),
     ];
     // BOM agar Excel membaca UTF-8 dengan benar; pemisah ";" sesuai Excel lokal Indonesia.
@@ -218,13 +218,19 @@ export default async function businessRoutes(app: FastifyInstance) {
     const routerList = db.select({ id: schema.routers.id, name: schema.routers.name, lastStatus: schema.routers.lastStatus, lastError: schema.routers.lastError, isDemo: schema.routers.isDemo, lastSeenAt: schema.routers.lastSeenAt }).from(schema.routers).all();
     const recent = db.select({
       id: schema.sales.id, amount: schema.sales.amount, soldAt: schema.sales.soldAt, code: schema.vouchers.code,
-      packageName: schema.packages.name, color: schema.packages.color,
+      packageName: schema.packages.name, color: schema.packages.color, channel: schema.sales.channel, customerName: schema.customers.name,
     }).from(schema.sales)
       .leftJoin(schema.vouchers, eq(schema.vouchers.id, schema.sales.voucherId))
-      .leftJoin(schema.packages, eq(schema.packages.id, schema.sales.packageId))
+      .leftJoin(schema.customers, eq(schema.customers.id, schema.sales.customerId))
+      .leftJoin(schema.packages, and(eq(schema.packages.id, schema.sales.packageId), eq(schema.sales.channel, 'hotspot')))
       .where(gte(schema.sales.soldAt, startToday - 7 * 86_400_000))
       .orderBy(desc(schema.sales.soldAt)).limit(8).all();
     const packagesCount = db.select({ n: count() }).from(schema.packages).get()?.n ?? 0;
-    return { today, yesterday, month, last7, counts, routers: routerList, recent, packagesCount };
+    const ppp = sqlite.prepare(`SELECT
+        (SELECT COUNT(*) FROM customers WHERE status = 'active') AS active,
+        (SELECT COUNT(*) FROM customers WHERE status = 'isolated') AS isolated,
+        (SELECT COALESCE(SUM(amount),0) FROM invoices WHERE status = 'unpaid' AND due_at < ?) AS overdue,
+        (SELECT COUNT(DISTINCT customer_id) FROM invoices WHERE status = 'unpaid' AND due_at < ?) AS overdueCustomers`).get(now, now);
+    return { today, yesterday, month, last7, counts, routers: routerList, recent, packagesCount, ppp };
   });
 }

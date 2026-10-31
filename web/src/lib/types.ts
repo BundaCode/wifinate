@@ -2,7 +2,7 @@ export interface User { id: number; username: string; name: string; role: 'admin
 
 export interface Router {
   id: number; name: string; host: string; port: number; username: string; useTls: boolean; isDemo: boolean;
-  hotspotServer: string | null; dnsName: string | null;
+  hotspotServer: string | null; dnsName: string | null; pppLocalAddress: string | null; pppPool: string | null;
   lastStatus: 'online' | 'offline' | 'unknown'; lastSeenAt: number | null; lastError: string | null; createdAt: number;
 }
 
@@ -39,12 +39,50 @@ export interface Settings {
 export interface SalesSummary {
   totals: { revenue: number; count: number; average: number; perDay: number; prevRevenue: number; prevCount: number };
   series: { bucket: string; revenue: number; count: number }[];
-  byPackage: { packageId: number; name: string; color: string; revenue: number; count: number }[];
+  byPackage: { packageId: string; channel: 'hotspot' | 'pppoe'; name: string; color: string; revenue: number; count: number }[];
+  byChannel: { channel: 'hotspot' | 'pppoe'; revenue: number; count: number }[];
   byRouter: { routerId: number; name: string; revenue: number; count: number }[];
   byHour: { hour: number; count: number; revenue: number }[];
 }
 
 export interface SaleRow {
   id: number; soldAt: number; amount: number; channel: string; code: string | null; status: VoucherStatus | null;
-  mac: string | null; packageName: string; packageColor: string; routerName: string;
+  mac: string | null; packageName: string; packageColor: string; routerName: string; customerName: string | null;
+}
+
+// ---------- PPPoE ----------
+export interface PppPlan {
+  id: number; name: string; price: number; rateDown: string | null; rateUp: string | null; color: string; active: boolean; customers: number;
+}
+
+export type CustomerStatus = 'active' | 'isolated' | 'disabled';
+export type BillingState = 'paid' | 'unpaid' | 'overdue';
+
+export interface Customer {
+  id: number; routerId: number; planId: number; name: string; phone: string | null; address: string | null; username: string;
+  status: CustomerStatus; nextDueAt: number; graceDays: number; autoIsolate: boolean; note: string | null; lastPaidAt: number | null;
+  syncError: string | null; createdAt: number; planName: string; planPrice: number; planColor: string; routerName: string;
+  unpaidTotal: number; unpaidCount: number; oldestUnpaidDue: number | null; billing: BillingState;
+}
+
+export interface Invoice {
+  id: number; customerId: number; period: string; amount: number; dueAt: number; status: 'unpaid' | 'paid' | 'void';
+  paidAt: number | null; method: string | null; createdAt: number;
+}
+
+export interface CustomerDetail extends Omit<Customer, 'planName' | 'planPrice' | 'planColor' | 'routerName' | 'unpaidTotal' | 'unpaidCount' | 'oldestUnpaidDue' | 'billing'> {
+  password?: string; plan: PppPlan; invoices: Invoice[];
+}
+
+export interface InvoiceRow extends Invoice {
+  customerName: string; phone: string | null; customerStatus: CustomerStatus; username: string; planName: string; planColor: string;
+}
+
+export interface CustomerSummary {
+  status: Partial<Record<CustomerStatus, number>>;
+  unpaid: { total: number; n: number };
+  overdue: { total: number; n: number };
+  dueSoon: number;
+  collected: { total: number; n: number };
+  mrr: number;
 }

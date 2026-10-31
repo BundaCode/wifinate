@@ -51,6 +51,7 @@ export default function Reports() {
   const [custom, setCustom] = useState({ from: toInput(new Date(Date.now() - 6 * 86_400_000)), to: toInput(new Date()) });
   const [routerId, setRouterId] = useState('');
   const [packageId, setPackageId] = useState('');
+  const [channel, setChannel] = useState<'' | 'hotspot' | 'pppoe'>('');
   const [granularity, setGranularity] = useState<'' | 'hour' | 'day' | 'month'>('');
   const [metric, setMetric] = useState<'revenue' | 'count'>('revenue');
   const [search, setSearch] = useState('');
@@ -61,10 +62,11 @@ export default function Reports() {
   const qs = useMemo(() => {
     const p = new URLSearchParams({ from: String(from), to: String(to), tz: String(tzOffset()) });
     if (routerId) p.set('routerId', routerId);
-    if (packageId) p.set('packageId', packageId);
+    if (channel) p.set('channel', channel);
+    if (packageId && channel !== 'pppoe') { p.set('packageId', packageId); p.set('channel', 'hotspot'); }
     if (granularity) p.set('granularity', granularity);
     return p.toString();
-  }, [from, to, routerId, packageId, granularity]);
+  }, [from, to, routerId, packageId, granularity, channel]);
 
   const summary = useQuery({ queryKey: ['report', qs], queryFn: () => api<SalesSummary>(`/reports/sales?${qs}`), placeholderData: keepPreviousData });
   const rowsQs = `${qs}&page=${page}&pageSize=25${search ? `&search=${encodeURIComponent(search)}` : ''}`;
@@ -73,6 +75,7 @@ export default function Reports() {
   const d = summary.data;
   const delta = (cur: number, prev: number) => (prev ? ((cur - prev) / prev) * 100 : null);
   const activeFilters = [routerId, packageId, granularity].filter(Boolean).length;
+  const chRev = (c: string) => d?.byChannel.find((x) => x.channel === c);
   const periodLabel = `${new Date(from).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })} – ${new Date(to - 1).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}`;
   const totalPkg = d?.byPackage.reduce((a, b) => a + b.revenue, 0) ?? 0;
   const hours = Array.from({ length: 24 }, (_, h) => ({ hour: h, count: d?.byHour.find((x) => x.hour === h)?.count ?? 0 }));
@@ -82,7 +85,7 @@ export default function Reports() {
     <>
       <PageHeader
         title="Laporan penjualan"
-        description={<>Periode <b className="text-[var(--text)]">{periodLabel}</b>. Penjualan tercatat saat voucher pertama kali dipakai login.</>}
+        description={<>Periode <b className="text-[var(--text)]">{periodLabel}</b>. Voucher tercatat saat pertama dipakai login, PPPoE saat tagihan dibayar.</>}
         actions={<>
           <Button variant="secondary" icon={Printer} onClick={() => window.print()}>Cetak</Button>
           <Button variant="secondary" icon={Download} onClick={() => openFile(`/reports/sales.csv?${qs}`, { download: `laporan-${toInput(new Date(from))}_${toInput(new Date(to - 1))}.csv` }).catch((e) => toast.error(e.message))}>Excel (CSV)</Button>
@@ -100,6 +103,11 @@ export default function Reports() {
             ))}
           </div>
           <div className="flex-1" />
+          <div className="inline-flex shrink-0 rounded-xl border p-0.5 text-sm">
+            {([['', 'Semua'], ['hotspot', 'Voucher'], ['pppoe', 'PPPoE']] as const).map(([k, l]) => (
+              <button key={k} onClick={() => { setChannel(k); setPage(1); if (k === 'pppoe') setPackageId(''); }} className={clsx('rounded-lg px-3 py-1.5 font-semibold', channel === k ? 'bg-brand-600 text-white' : 'text-muted')}>{l}</button>
+            ))}
+          </div>
           <Button variant="secondary" size="sm" icon={SlidersHorizontal} onClick={() => setShowFilters((s) => !s)}>
             Filter lainnya {activeFilters > 0 && <span className="grid size-5 place-items-center rounded-full bg-brand-600 text-[11px] text-white">{activeFilters}</span>}
           </Button>
@@ -120,7 +128,7 @@ export default function Reports() {
               {routers.data?.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
             </Select>
             <Select value={packageId} onChange={(e) => { setPackageId(e.target.value); setPage(1); }}>
-              <option value="">Semua paket</option>
+              <option value="">Semua paket voucher</option>
               {packages.data?.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
             </Select>
             <Select value={granularity} onChange={(e) => setGranularity(e.target.value as typeof granularity)}>
@@ -145,8 +153,9 @@ export default function Reports() {
         <div className={clsx('space-y-6 transition', summary.isFetching && 'opacity-70')}>
           <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
             <StatCard label="Total pendapatan" value={rupiah(d.totals.revenue)} icon={Wallet} delta={delta(d.totals.revenue, d.totals.prevRevenue)} sub="vs periode sebelumnya" />
-            <StatCard label="Voucher terjual" value={num(d.totals.count)} icon={Receipt} tone="sky" delta={delta(d.totals.count, d.totals.prevCount)} sub="vs periode sebelumnya" />
-            <StatCard label="Rata-rata per hari" value={rupiah(d.totals.perDay)} icon={TrendingUp} tone="green" sub={`Rata-rata ${rupiah(d.totals.average)} / voucher`} />
+            <StatCard label={channel === 'pppoe' ? 'Pembayaran PPPoE' : channel === 'hotspot' ? 'Voucher terjual' : 'Transaksi'} value={num(d.totals.count)} icon={Receipt} tone="sky" delta={delta(d.totals.count, d.totals.prevCount)}
+              sub={!channel && d.byChannel.length > 1 ? `${num(chRev('hotspot')?.count ?? 0)} voucher • ${num(chRev('pppoe')?.count ?? 0)} PPPoE` : 'vs periode sebelumnya'} />
+            <StatCard label="Rata-rata per hari" value={rupiah(d.totals.perDay)} icon={TrendingUp} tone="green" sub={`Rata-rata ${rupiah(d.totals.average)} / ${channel === "hotspot" ? "voucher" : "transaksi"}`} />
             <StatCard label="Penyumbang terbesar" value={d.byPackage[0]?.name ?? '—'} icon={BarChart3} tone="amber" sub={d.byPackage[0] ? `${num(d.byPackage[0].count)} terjual` : 'Belum ada data'} />
           </div>
 
@@ -186,8 +195,12 @@ export default function Reports() {
 
           <div className="grid gap-6 lg:grid-cols-2">
             <div className="card p-5">
-              <h3 className="font-bold">Penjualan per paket</h3>
-              <p className="mb-4 text-sm text-muted">Paket mana yang paling laku.</p>
+              <h3 className="font-bold">Pendapatan per paket</h3>
+              <p className="mb-4 text-sm text-muted">
+                {!channel && d.byChannel.length > 1
+                  ? <>Voucher <b className="text-[var(--text)]">{rupiah(chRev('hotspot')?.revenue ?? 0)}</b> • PPPoE <b className="text-[var(--text)]">{rupiah(chRev('pppoe')?.revenue ?? 0)}</b></>
+                  : 'Paket mana yang paling menghasilkan.'}
+              </p>
               {d.byPackage.length === 0 ? <p className="py-10 text-center text-sm text-muted">Belum ada data.</p> : (
                 <div className="flex flex-col items-center gap-6 sm:flex-row">
                   <div className="relative size-48 shrink-0">
@@ -207,7 +220,7 @@ export default function Reports() {
                     {d.byPackage.map((p) => (
                       <li key={p.packageId}>
                         <div className="flex items-center justify-between text-sm">
-                          <span className="flex items-center gap-2 font-semibold"><span className="size-2.5 rounded-full" style={{ background: p.color }} />{p.name}</span>
+                          <span className="flex items-center gap-2 font-semibold"><span className="size-2.5 rounded-full" style={{ background: p.color }} />{p.name}{p.channel === 'pppoe' && <Badge tone="blue">PPPoE</Badge>}</span>
                           <span className="font-bold">{rupiah(p.revenue)}</span>
                         </div>
                         <div className="mt-1.5 flex items-center gap-2">
@@ -264,20 +277,20 @@ export default function Reports() {
               <h3 className="font-bold">Rincian transaksi</h3>
               <div className="relative no-print sm:w-64">
                 <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
-                <Input className="h-9 pl-9 text-sm" placeholder="Cari kode voucher / MAC" value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} />
+                <Input className="h-9 pl-9 text-sm" placeholder="Cari kode, MAC, atau pelanggan" value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} />
               </div>
             </div>
             <div className="overflow-x-auto">
               <table className="table-base">
-                <thead><tr><th>Waktu</th><th>Kode</th><th>Paket</th><th>Router</th><th>Status</th><th className="text-right">Nominal</th></tr></thead>
+                <thead><tr><th>Waktu</th><th>Voucher / Pelanggan</th><th>Paket</th><th>Router</th><th>Status</th><th className="text-right">Nominal</th></tr></thead>
                 <tbody>
                   {rows.data?.rows.map((r) => (
                     <tr key={r.id}>
                       <td className="text-muted">{dateTime(r.soldAt)}</td>
-                      <td className="font-mono font-semibold">{r.code ?? '—'}</td>
+                      <td>{r.channel === 'pppoe' ? <span><b>{r.customerName}</b> <span className="font-mono text-xs text-muted">@{r.code}</span></span> : <span className="font-mono font-semibold">{r.code ?? '—'}</span>}</td>
                       <td><span className="inline-flex items-center gap-2"><span className="size-2 rounded-full" style={{ background: r.packageColor }} />{r.packageName}</span></td>
                       <td className="text-muted">{r.routerName}</td>
-                      <td>{r.status ? <Badge tone={voucherStatus[r.status].tone}>{voucherStatus[r.status].label}</Badge> : '—'}</td>
+                      <td>{r.channel === 'pppoe' ? <Badge tone="blue">PPPoE lunas</Badge> : r.status ? <Badge tone={voucherStatus[r.status].tone}>{voucherStatus[r.status].label}</Badge> : '—'}</td>
                       <td className="text-right font-bold">{rupiah(r.amount)}</td>
                     </tr>
                   ))}

@@ -16,8 +16,9 @@ interface DashboardData {
   last7: { bucket: string; revenue: number; count: number }[];
   counts: Record<string, number>;
   routers: { id: number; name: string; lastStatus: string; lastError: string | null; isDemo: boolean; lastSeenAt: number | null }[];
-  recent: { id: number; amount: number; soldAt: number; code: string | null; packageName: string | null; color: string | null }[];
+  recent: { id: number; amount: number; soldAt: number; code: string | null; packageName: string | null; color: string | null; channel: string; customerName: string | null }[];
   packagesCount: number;
+  ppp: { active: number; isolated: number; overdue: number; overdueCustomers: number };
 }
 
 function fill7(rows: DashboardData['last7']) {
@@ -144,17 +145,34 @@ export default function Dashboard() {
             )}
           </div>
 
+          {(data.ppp.active > 0 || data.ppp.isolated > 0) && (
+            <Link to="/pelanggan" className="card block p-5 transition hover:border-brand-400">
+              <div className="flex items-center justify-between">
+                <h3 className="font-bold">Pelanggan PPPoE</h3>
+                <ArrowRight className="size-4 text-muted" />
+              </div>
+              <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+                <div className="rounded-xl bg-emerald-500/10 p-2.5"><p className="text-lg font-extrabold text-emerald-600">{data.ppp.active}</p><p className="text-[11px] text-muted">Aktif</p></div>
+                <div className="rounded-xl bg-rose-500/10 p-2.5"><p className="text-lg font-extrabold text-rose-600">{data.ppp.isolated}</p><p className="text-[11px] text-muted">Terisolir</p></div>
+                <div className="rounded-xl bg-amber-500/10 p-2.5"><p className="text-lg font-extrabold text-amber-600">{data.ppp.overdueCustomers}</p><p className="text-[11px] text-muted">Telat bayar</p></div>
+              </div>
+              {data.ppp.overdue > 0 && <p className="mt-3 text-sm">Tunggakan: <b className="text-rose-600">{rupiah(data.ppp.overdue)}</b></p>}
+            </Link>
+          )}
+
           <div className="card p-5">
             <h3 className="mb-3 font-bold">Penjualan terbaru</h3>
             {data.recent.length === 0 ? (
-              <p className="py-6 text-center text-sm text-muted">Belum ada penjualan. Voucher tercatat terjual saat pelanggan pertama kali login.</p>
+              <p className="py-6 text-center text-sm text-muted">Belum ada penjualan. Voucher tercatat terjual saat pelanggan pertama kali login, PPPoE saat tagihan dibayar.</p>
             ) : (
               <ul className="divide-y">
                 {data.recent.map((s) => (
                   <li key={s.id} className="flex items-center gap-3 py-2.5">
                     <span className="size-2 rounded-full" style={{ background: s.color ?? '#94a3b8' }} />
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold">{s.packageName ?? 'Paket'} <span className="font-mono text-xs text-muted">{s.code}</span></p>
+                      <p className="truncate text-sm font-semibold">
+                        {s.channel === 'pppoe' ? <>Bayar PPPoE <span className="text-xs font-normal text-muted">{s.customerName}</span></> : <>{s.packageName ?? 'Paket'} <span className="font-mono text-xs text-muted">{s.code}</span></>}
+                      </p>
                       <p className="text-xs text-muted">{relative(s.soldAt)}</p>
                     </div>
                     <span className="text-sm font-bold text-emerald-600">+{rupiah(s.amount)}</span>

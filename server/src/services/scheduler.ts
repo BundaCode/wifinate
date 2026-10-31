@@ -2,6 +2,7 @@ import { and, eq, inArray } from 'drizzle-orm';
 import { db, schema, sqlite } from '../db.js';
 import { friendlyRouterError, getDriver } from '../mikrotik/pool.js';
 import { SCHEDULER_INTERVAL_MS } from '../config.js';
+import { billingCycle } from './pppoe.js';
 
 /**
  * Penjadwal voucher. Setiap interval, untuk setiap router:
@@ -94,6 +95,7 @@ export async function syncRouter(router: typeof schema.routers.$inferSelect) {
 }
 
 let running = false;
+let lastBilling = 0;
 
 export async function syncAll() {
   if (running) return;
@@ -101,6 +103,11 @@ export async function syncAll() {
   try {
     const list = db.select().from(schema.routers).all();
     await Promise.allSettled(list.map(syncRouter));
+    // Penagihan PPPoE cukup dicek tiap menit.
+    if (Date.now() - lastBilling >= 60_000) {
+      lastBilling = Date.now();
+      await billingCycle().catch((e) => console.error('billingCycle', e));
+    }
   } finally {
     running = false;
   }

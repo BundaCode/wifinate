@@ -89,8 +89,8 @@ export default function Packages() {
   return (
     <>
       <PageHeader
-        title="Paket"
-        description="Daftar harga yang Anda jual. Setiap voucher mengikuti aturan paketnya: harga, lama pakai, kecepatan."
+        title="Paket voucher"
+        description="Daftar harga voucher hotspot. Setiap voucher mengikuti aturan paketnya: harga, lama pakai, kecepatan."
         actions={isAdmin && <Button icon={Plus} onClick={() => { setErrors({}); setForm({ ...empty, color: COLORS[(data?.length ?? 0) % COLORS.length] }); }}>Paket baru</Button>}
       />
 

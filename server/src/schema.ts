@@ -26,6 +26,9 @@ export const routers = sqliteTable('routers', {
   isDemo: integer('is_demo', { mode: 'boolean' }).notNull().default(false),
   hotspotServer: text('hotspot_server'),
   dnsName: text('dns_name'),
+  /** Hasil wizard PPPoE: alamat gateway & nama pool untuk profil paket. */
+  pppLocalAddress: text('ppp_local_address'),
+  pppPool: text('ppp_pool'),
   lastStatus: text('last_status', { enum: ['online', 'offline', 'unknown'] }).notNull().default('unknown'),
   lastSeenAt: integer('last_seen_at'),
   lastError: text('last_error'),
@@ -90,5 +93,57 @@ export const sales = sqliteTable('sales', {
   /** Siapa yang membuat voucher (kasir/admin). */
   userId: integer('user_id'),
   channel: text('channel', { enum: ['hotspot', 'pppoe'] }).notNull().default('hotspot'),
+  customerId: integer('customer_id'),
+  invoiceId: integer('invoice_id'),
   soldAt: integer('sold_at').notNull(),
+});
+
+// ---------- PPPoE (tahap 2) ----------
+
+export const pppPlans = sqliteTable('ppp_plans', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  name: text('name').notNull(),
+  /** Harga per bulan. */
+  price: integer('price').notNull(),
+  rateDown: text('rate_down'),
+  rateUp: text('rate_up'),
+  color: text('color').notNull().default('#0ea5e9'),
+  active: integer('active', { mode: 'boolean' }).notNull().default(true),
+  createdAt: integer('created_at').notNull(),
+});
+
+export const customers = sqliteTable('customers', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  routerId: integer('router_id').notNull(),
+  planId: integer('plan_id').notNull(),
+  name: text('name').notNull(),
+  phone: text('phone'),
+  address: text('address'),
+  username: text('username').notNull(),
+  passwordEnc: text('password_enc').notNull(),
+  status: text('status', { enum: ['active', 'isolated', 'disabled'] }).notNull().default('active'),
+  /** Tanggal jatuh tempo berikutnya (ms). */
+  nextDueAt: integer('next_due_at').notNull(),
+  /** Toleransi telat bayar sebelum diisolir (hari). */
+  graceDays: integer('grace_days').notNull().default(3),
+  autoIsolate: integer('auto_isolate', { mode: 'boolean' }).notNull().default(true),
+  note: text('note'),
+  lastPaidAt: integer('last_paid_at'),
+  /** Error terakhir saat sinkron ke router (mis. gagal isolir). */
+  syncError: text('sync_error'),
+  createdAt: integer('created_at').notNull(),
+});
+
+export const invoices = sqliteTable('invoices', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  customerId: integer('customer_id').notNull(),
+  /** Periode tagihan, mis. "2026-11". */
+  period: text('period').notNull(),
+  amount: integer('amount').notNull(),
+  dueAt: integer('due_at').notNull(),
+  status: text('status', { enum: ['unpaid', 'paid', 'void'] }).notNull().default('unpaid'),
+  paidAt: integer('paid_at'),
+  method: text('method'),
+  receivedBy: integer('received_by'),
+  createdAt: integer('created_at').notNull(),
 });

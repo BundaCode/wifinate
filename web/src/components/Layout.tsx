@@ -3,17 +3,18 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import clsx from 'clsx';
 import {
   LayoutDashboard, Ticket, Package as PackageIcon, Activity, BarChart3, Router as RouterIcon, Settings,
-  LogOut, Moon, Sun, Menu, X, Wifi,
+  LogOut, Moon, Sun, Menu, X, Wifi, Users,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { useTheme } from '@/lib/theme';
 
 const nav = [
-  { to: '/', label: 'Beranda', icon: LayoutDashboard, end: true },
-  { to: '/voucher', label: 'Voucher', icon: Ticket },
-  { to: '/paket', label: 'Paket', icon: PackageIcon },
-  { to: '/monitor', label: 'Monitor', icon: Activity },
-  { to: '/laporan', label: 'Laporan', icon: BarChart3 },
+  { to: '/', label: 'Beranda', icon: LayoutDashboard, end: true, mobile: true },
+  { to: '/voucher', label: 'Voucher', icon: Ticket, mobile: true },
+  { to: '/pelanggan', label: 'Pelanggan', icon: Users, mobile: true },
+  { to: '/paket', label: 'Paket Voucher', icon: PackageIcon },
+  { to: '/monitor', label: 'Monitor', icon: Activity, mobile: true },
+  { to: '/laporan', label: 'Laporan', icon: BarChart3, mobile: true },
   { to: '/router', label: 'Router', icon: RouterIcon, admin: true },
   { to: '/pengaturan', label: 'Pengaturan', icon: Settings, admin: true },
 ];
@@ -101,7 +102,7 @@ export default function Layout() {
 
       {/* Navigasi bawah untuk HP */}
       <nav className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-5 border-t bg-[var(--surface)]/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl lg:hidden">
-        {items.slice(0, 5).map(({ to, label, icon: Icon, end }) => (
+        {items.filter((n) => n.mobile).map(({ to, label, icon: Icon, end }) => (
           <NavLink key={to} to={to} end={end} className={({ isActive }) => clsx('flex flex-col items-center gap-1 py-2.5 text-[11px] font-semibold', isActive ? 'text-brand-600' : 'text-muted')}>
             <Icon className="size-5" />
             {label}

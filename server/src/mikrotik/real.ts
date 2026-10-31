@@ -1,6 +1,7 @@
 import { RouterOSAPI } from 'node-routeros';
 import type {
-  ActiveSession, HotspotUserInput, HotspotUserStat, PppActive, RosCommand, RouterDriver, RouterInfo, RouterInterface,
+  ActiveSession, HotspotUserInput, HotspotUserStat, PppActive, PppProfileInput, PppSecret, RosCommand, RouterDriver, RouterInfo,
+  RouterInterface, TrafficSample,
 } from './types.js';
 
 type Row = Record<string, string>;
@@ -149,6 +150,64 @@ export class RealDriver implements RouterDriver {
     return rows.map((r) => ({
       name: r.name, service: r.service, address: r.address, callerId: r['caller-id'], uptimeSec: parseRosDuration(r.uptime),
     }));
+  }
+
+  async upsertPppProfile(p: PppProfileInput) {
+    const existing = await this.run('/ppp/profile/print', [`?name=${p.name}`]);
+    const params: Record<string, string> = { 'rate-limit': p.rateLimit ?? '' };
+    if (p.localAddress) params['local-address'] = p.localAddress;
+    if (p.remoteAddress) params['remote-address'] = p.remoteAddress;
+    if (p.addressList !== undefined) params['address-list'] = p.addressList;
+    if (existing[0]) await this.run('/ppp/profile/set', { '.id': existing[0]['.id'], ...params });
+    else await this.run('/ppp/profile/add', { name: p.name, ...params });
+  }
+
+  private async secretId(name: string): Promise<string | undefined> {
+    const rows = await this.run('/ppp/secret/print', [`?name=${name}`, '=.proplist=.id']);
+    return rows[0]?.['.id'];
+  }
+
+  async upsertPppSecret(sec: { name: string; password: string; profile: string; comment?: string; disabled?: boolean }) {
+    const params: Record<string, string> = {
+      password: sec.password, profile: sec.profile, service: 'pppoe', disabled: sec.disabled ? 'yes' : 'no',
+    };
+    if (sec.comment) params.comment = sec.comment;
+    const id = await this.secretId(sec.name);
+    if (id) await this.run('/ppp/secret/set', { '.id': id, ...params });
+    else await this.run('/ppp/secret/add', { name: sec.name, ...params });
+  }
+
+  async setPppSecret(name: string, patch: { profile?: string; disabled?: boolean; password?: string }) {
+    const id = await this.secretId(name);
+    if (!id) throw new Error(`Akun PPPoE "${name}" tidak ada di router`);
+    const params: Record<string, string> = {};
+    if (patch.profile) params.profile = patch.profile;
+    if (patch.password) params.password = patch.password;
+    if (patch.disabled !== undefined) params.disabled = patch.disabled ? 'yes' : 'no';
+    await this.run('/ppp/secret/set', { '.id': id, ...params });
+  }
+
+  async removePppSecret(name: string) {
+    const id = await this.secretId(name);
+    if (id) await this.run('/ppp/secret/remove', { '.id': id });
+  }
+
+  async kickPpp(name: string) {
+    const rows = await this.run('/ppp/active/print', [`?name=${name}`, '=.proplist=.id']);
+    if (rows.length) await this.run('/ppp/active/remove', { '.id': rows.map((r) => r['.id']).join(',') });
+  }
+
+  async pppSecrets(): Promise<PppSecret[]> {
+    const rows = await this.run('/ppp/secret/print');
+    return rows.map((r) => ({
+      name: r.name, password: r.password ?? '', profile: r.profile ?? 'default', service: r.service ?? 'any',
+      disabled: r.disabled === 'true', comment: r.comment ?? '',
+    }));
+  }
+
+  async monitorTraffic(iface: string): Promise<TrafficSample> {
+    const [r] = await this.run('/interface/monitor-traffic', [`=interface=${iface}`, '=once=']);
+    return { rx: Number(r?.['rx-bits-per-second'] ?? 0), tx: Number(r?.['tx-bits-per-second'] ?? 0) };
   }
 
   async backup(name: string) {

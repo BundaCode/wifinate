@@ -46,14 +46,30 @@ Belum dipakai → Aktif (login pertama, penjualan dicatat) → Habis (masa aktif
 ```
 Penjadwal berjalan tiap 30 detik: mencatat aktivasi, memperbarui pemakaian, menghapus & memutus voucher yang habis, dan memantau status router.
 
+## Alur PPPoE (Tahap 2 — sudah tersedia)
+
+1. **Router → Siapkan PPPoE**: pilih port internet & port pelanggan → preview → backup → terapkan.
+   Membuat pool IP, profil dasar, server PPPoE, profil `wifinate-isolir` + firewall blokir, dan NAT.
+2. **Pelanggan → Paket PPPoE**: buat paket bulanan, mis. “Rumahan 10 Mbps — Rp150.000”.
+   Setiap paket menjadi profil `wifinate-ppp<id>` di router (kecepatan ikut diperbarui saat paket diubah).
+3. **Pelanggan baru**: isi nama, WA, alamat, pilih paket. Username & password PPPoE dibuat (bisa acak).
+   Opsi “Bayar bulan pertama sekarang” langsung mencatat pembayaran. Sudah punya pelanggan di MikroTik? Pakai **Impor dari router**.
+4. **Siklus tagihan otomatis** (dicek tiap menit):
+   ```
+   H-7 jatuh tempo → tagihan dibuat → jatuh tempo → lewat toleransi (default 3 hari) → ISOLIR otomatis
+   Bayar → tagihan lunas, jatuh tempo maju 1 bulan → jika terisolir: AKTIF lagi otomatis
+   ```
+   Isolir = profil akun diganti ke `wifinate-isolir` (128k + masuk address-list yang diblokir firewall) dan sesi diputus agar langsung berlaku.
+5. **Tagihan**: daftar tunggakan, tombol **Bayar** dan **Ingatkan via WA** (pesan tagihan otomatis terisi).
+6. Pembayaran masuk **Laporan** sebagai kanal PPPoE.
+
+Catatan: aturan firewall isolir ditambahkan di akhir daftar filter. Jika router punya aturan `accept` umum di chain forward sebelumnya, pindahkan aturan `wifinate:pppoe blokir isolir` ke atas.
+
 ## Rencana tahap berikutnya
 
-### Tahap 2 — PPPoE & monitoring lanjutan
-- Pelanggan PPPoE: tambah pelanggan → pilih paket → selesai.
-- Tanggal jatuh tempo, **isolir otomatis** saat telat bayar, buka isolir saat lunas.
-- Tagihan bulanan & pencatatan pembayaran (masuk laporan penjualan kanal `pppoe`).
-- Grafik trafik live per interface (WebSocket).
+### Tahap 2b — sisa
 - Editor halaman login hotspot (logo, warna, daftar harga) yang di-upload ke router.
+- Halaman informasi “Anda terisolir, silakan bayar” untuk pelanggan yang diisolir.
 
 ### Tahap 3 — Jaringan kantor & multi-lokasi
 - Wizard **LAN kantor**: bagi jaringan per divisi (VLAN/IP), DHCP, dan bandwidth (simple queue / PCQ), contoh: Keuangan 10 Mbps, Marketing 20 Mbps, Tamu 5 Mbps.

@@ -5,12 +5,14 @@ import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import jwt from '@fastify/jwt';
 import fastifyStatic from '@fastify/static';
+import websocket from '@fastify/websocket';
 import { ZodError } from 'zod';
 import { APP_SECRET, HOST, IS_PROD, PORT } from './config.js';
 import './db.js';
 import authRoutes from './routes/auth.js';
 import routerRoutes from './routes/routers.js';
 import businessRoutes from './routes/business.js';
+import pppoeRoutes, { trafficWs } from './routes/pppoe.js';
 import { startScheduler } from './services/scheduler.js';
 
 const app = Fastify({
@@ -20,6 +22,7 @@ const app = Fastify({
 
 await app.register(cors, { origin: IS_PROD ? false : true });
 await app.register(jwt, { secret: APP_SECRET.toString('hex') });
+await app.register(websocket);
 
 // Pesan error yang ramah: validasi form ditampilkan per isian.
 app.setErrorHandler((err, _req, reply) => {
@@ -39,6 +42,8 @@ app.get('/api/health', async () => ({ ok: true, time: Date.now() }));
 await app.register(authRoutes);
 await app.register(routerRoutes);
 await app.register(businessRoutes);
+await app.register(pppoeRoutes);
+await app.register(trafficWs);
 
 // Produksi: server sekaligus menyajikan tampilan web hasil build Vite.
 const webDist = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../web/dist');

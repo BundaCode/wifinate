@@ -7,6 +7,7 @@ import { api } from '@/lib/api';
 import { useRouters } from '@/lib/queries';
 import { bytes, humanSeconds, relative } from '@/lib/format';
 import { Badge, Button, EmptyState, Input, PageHeader, Select, Skeleton, StatCard } from '@/components/ui';
+import LiveTraffic from '@/components/LiveTraffic';
 
 interface ActiveData {
   hotspot: { user: string; address: string; mac: string; uptimeSec: number; bytesIn: number; bytesOut: number; server: string;
@@ -36,7 +37,7 @@ export default function Monitor() {
 
   return (
     <>
-      <PageHeader title="Monitor" description="Siapa saja yang sedang online. Diperbarui otomatis setiap 5 detik."
+      <PageHeader title="Monitor" description="Trafik internet secara langsung dan siapa saja yang sedang online."
         actions={<>
           {routers.data.length > 1 && (
             <Select className="w-52" value={routerId} onChange={(e) => setRid(Number(e.target.value))}>
@@ -46,6 +47,8 @@ export default function Monitor() {
           <Button variant="secondary" icon={RefreshCw} onClick={() => active.refetch()} loading={active.isFetching}>Segarkan</Button>
         </>}
       />
+
+      {routerId && <div className="mb-6"><LiveTraffic routerId={routerId} /></div>}
 
       {active.isError ? (
         <div className="card p-6 text-center text-rose-600">{(active.error as Error).message}</div>

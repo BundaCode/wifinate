@@ -4,7 +4,7 @@ Aplikasi web untuk mengelola **bisnis WiFi voucher (hotspot) & PPPoE MikroTik**.
 
 > Mirip Mikhmon, tapi lebih lengkap: wizard setup hotspot, masa aktif voucher diurus otomatis oleh server, laporan penjualan dengan grafik & filter, mode gelap, dan nyaman dipakai di HP.
 
-## Fitur (Tahap 1)
+## Fitur
 
 | Fitur | Keterangan |
 |---|---|
@@ -13,9 +13,13 @@ Aplikasi web untuk mengelola **bisnis WiFi voucher (hotspot) & PPPoE MikroTik**.
 | 🎟️ **Generate voucher** | Ratusan voucher sekaligus, langsung dikirim ke router secara paralel. Kode tanpa karakter membingungkan (0/O, 1/I). |
 | 🖨️ **Cetak PDF** | Kartu voucher A4 (3–5 kolom) dengan nama usaha, harga, masa aktif & **QR code login otomatis**. |
 | ⏱️ **Masa aktif otomatis** | Server memantau login pertama, menghitung masa aktif, lalu menghapus & memutus voucher yang habis. |
-| 📊 **Laporan penjualan** | Filter periode (hari ini, 7/30 hari, bulan ini/lalu, tahun ini, tanggal bebas), router, paket. Grafik pendapatan, per paket, **jam ramai**, perbandingan periode sebelumnya, ekspor Excel (CSV) & cetak. |
-| 📡 **Monitor** | Pelanggan hotspot & PPPoE yang sedang online, update otomatis tiap 5 detik. |
-| 👥 **Multi pengguna** | Admin (akses penuh) & kasir (buat/cetak voucher). |
+| 📊 **Laporan penjualan** | Gabungan voucher & PPPoE (bisa dipisah). Filter periode (hari ini, 7/30 hari, bulan ini/lalu, tahun ini, tanggal bebas), router, paket. Grafik pendapatan, per paket, **jam ramai**, perbandingan periode sebelumnya, ekspor Excel (CSV) & cetak. |
+| 👤 **Pelanggan PPPoE** | Paket bulanan, data pelanggan, akun PPPoE langsung dibuat di router, **impor akun yang sudah ada** dari MikroTik. |
+| 🧾 **Tagihan otomatis** | Tagihan bulan berikutnya dibuat H-7 jatuh tempo, terima pembayaran (tunai/transfer/QRIS), bayar di muka, riwayat tagihan, **pengingat WhatsApp** sekali klik. |
+| 🔒 **Isolir otomatis** | Pelanggan yang telat bayar melewati masa toleransi otomatis diisolir (internet diblokir), dan **aktif kembali otomatis saat lunas**. |
+| 🧙 **Wizard server PPPoE** | Pool IP, profil, server PPPoE, profil & firewall isolir, NAT — dengan preview & backup otomatis. |
+| 📡 **Monitor** | **Grafik trafik live** per port (WebSocket, tiap detik), pelanggan hotspot & PPPoE yang sedang online. |
+| 👥 **Multi pengguna** | Admin (akses penuh) & kasir (buat/cetak voucher, terima pembayaran). |
 | 🧪 **Router demo** | Coba semua fitur tanpa MikroTik asli. |
 
 Rencana tahap berikutnya ada di [docs/SKENARIO.md](docs/SKENARIO.md).

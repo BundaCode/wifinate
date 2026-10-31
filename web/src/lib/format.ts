@@ -79,3 +79,25 @@ export const axisShort = (n: number) => {
   if (n >= 1_000) return `${Math.round(n / 1_000)}rb`;
   return String(n);
 };
+
+export const dateOnly = (ms: number) => new Date(ms).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+
+export function periodLabel(p: string): string {
+  const [y, m] = p.split('-').map(Number);
+  return new Date(y, m - 1, 1).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+}
+
+/** Bit per detik → teks: 12.4 Mbps */
+export function bps(n: number): string {
+  if (n >= 1e9) return `${(n / 1e9).toFixed(2)} Gbps`;
+  if (n >= 1e6) return `${(n / 1e6).toFixed(1)} Mbps`;
+  if (n >= 1e3) return `${(n / 1e3).toFixed(0)} Kbps`;
+  return `${n} bps`;
+}
+
+/** Nomor HP Indonesia → format wa.me (62…). */
+export function waNumber(phone: string): string {
+  const d = phone.replace(/\D/g, '');
+  if (d.startsWith('0')) return `62${d.slice(1)}`;
+  return d;
+}

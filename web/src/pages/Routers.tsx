@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import clsx from 'clsx';
 import {
-  Plus, Router as RouterIcon, PlugZap, CheckCircle2, Trash2, Wand2, Sparkles, Cpu, Clock, ShieldCheck, ArrowLeft, ArrowRight, Cable, Globe, Wifi,
+  Plus, Router as RouterIcon, PlugZap, CheckCircle2, Trash2, Wand2, Sparkles, Cpu, Clock, ShieldCheck, ArrowLeft, ArrowRight, Cable, Globe, Wifi, Network,
 } from 'lucide-react';
 import { api, ApiError } from '@/lib/api';
 import { useRouters } from '@/lib/queries';
@@ -182,7 +182,88 @@ function HotspotWizard({ router, onClose }: { router: Router; onClose: () => voi
   );
 }
 
-function RouterCard({ r, onSetup }: { r: Router; onSetup: () => void }) {
+type PSetup = { lanInterface: string; wanInterface: string; networkPrefix: string; serviceName: string };
+
+function PppoeWizard({ router, onClose }: { router: Router; onClose: () => void }) {
+  const qc = useQueryClient();
+  const [step, setStep] = useState(0);
+  const [s, setS] = useState<PSetup>({ lanInterface: '', wanInterface: 'ether1', networkPrefix: '172.16.0', serviceName: 'wifinate' });
+  const ifaces = useQuery({ queryKey: ['ifaces', router.id], queryFn: () => api<RouterInterface[]>(`/routers/${router.id}/interfaces`) });
+  const preview = useMutation({
+    mutationFn: () => api<{ steps: { path: string; description: string }[] }>(`/routers/${router.id}/pppoe/preview`, { method: 'POST', json: s }),
+    onSuccess: () => setStep(2),
+    onError: (e) => toast.error(e.message),
+  });
+  const apply = useMutation({
+    mutationFn: () => api<{ backupName: string }>(`/routers/${router.id}/pppoe/apply`, { method: 'POST', json: s }),
+    onSuccess: (r) => { toast.success(`Server PPPoE aktif! Backup: ${r.backupName}`); qc.invalidateQueries({ queryKey: ['routers'] }); setStep(3); },
+    onError: (e) => toast.error(e.message, { duration: 12_000 }),
+  });
+  const list = (ifaces.data ?? []).filter((i) => !i.disabled);
+  const pick = (value: string, onPick: (n: string) => void, exclude?: string) => (
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+      {list.filter((i) => i.name !== exclude).map((i) => (
+        <button type="button" key={i.name} onClick={() => onPick(i.name)}
+          className={clsx('flex items-center gap-2 rounded-xl border p-3 text-left text-sm transition', value === i.name ? 'border-brand-600 bg-brand-500/5 ring-2 ring-brand-500/20' : 'hover:bg-[var(--surface-2)]')}>
+          <Cable className="size-4" /><span className="flex-1 font-semibold">{i.name}</span>
+          <span className={clsx('size-2 rounded-full', i.running ? 'bg-emerald-500' : 'bg-slate-400')} />
+        </button>
+      ))}
+    </div>
+  );
+  const titles = ['Pilih port internet', 'Pilih port pelanggan', 'Periksa sebelum diterapkan', 'Selesai'];
+  return (
+    <Modal open onClose={onClose} size="lg" title={`Siapkan server PPPoE — ${router.name}`} description={`Langkah ${step + 1} dari 4: ${titles[step]}`}
+      footer={step < 3 ? <>
+        {step > 0 && <Button variant="secondary" icon={ArrowLeft} onClick={() => setStep(step - 1)}>Kembali</Button>}
+        {step === 0 && <Button icon={ArrowRight} disabled={!s.wanInterface} onClick={() => setStep(1)}>Lanjut</Button>}
+        {step === 1 && <Button icon={ArrowRight} disabled={!s.lanInterface} loading={preview.isPending} onClick={() => preview.mutate()}>Lihat rencana</Button>}
+        {step === 2 && <Button icon={Wand2} loading={apply.isPending} onClick={() => apply.mutate()}>Terapkan sekarang</Button>}
+      </> : <Button onClick={onClose}>Tutup</Button>}>
+      <div className="mb-5 flex gap-1.5">{[0, 1, 2, 3].map((i) => <div key={i} className={clsx('h-1.5 flex-1 rounded-full', i <= step ? 'bg-brand-600' : 'bg-[var(--surface-2)]')} />)}</div>
+      {ifaces.isLoading ? <Skeleton className="h-40" /> : (
+        <>
+          {step === 0 && <div className="space-y-4"><p className="flex items-center gap-2 text-[15px]"><Globe className="size-5 text-brand-600" /> Port mana yang tersambung ke <b>modem / ISP</b>?</p>{pick(s.wanInterface, (n) => setS({ ...s, wanInterface: n }))}</div>}
+          {step === 1 && (
+            <div className="space-y-5">
+              <p className="flex items-center gap-2 text-[15px]"><Network className="size-5 text-brand-600" /> Port mana yang menuju <b>pelanggan PPPoE</b> (switch / OLT / kabel ke rumah)?</p>
+              {pick(s.lanInterface, (n) => setS({ ...s, lanInterface: n }), s.wanInterface)}
+              <details className="rounded-xl border p-4 text-sm">
+                <summary className="cursor-pointer font-semibold">Pengaturan lanjutan (boleh dilewati)</summary>
+                <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                  <Field label="Jaringan pelanggan" hint={`Gateway ${s.networkPrefix}.1`}><Input value={s.networkPrefix} onChange={(e) => setS({ ...s, networkPrefix: e.target.value })} /></Field>
+                  <Field label="Nama layanan"><Input value={s.serviceName} onChange={(e) => setS({ ...s, serviceName: e.target.value })} /></Field>
+                </div>
+              </details>
+            </div>
+          )}
+          {step === 2 && preview.data && (
+            <div className="space-y-4">
+              <div className="flex gap-3 rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4 text-sm"><ShieldCheck className="size-5 shrink-0 text-emerald-600" /><span>Router akan <b>dibackup otomatis</b> sebelum diubah.</span></div>
+              <ol className="space-y-2">
+                {preview.data.steps.map((st, i) => (
+                  <li key={i} className="flex gap-3 rounded-xl bg-[var(--surface-2)] p-3">
+                    <span className="grid size-6 shrink-0 place-items-center rounded-full bg-brand-600 text-xs font-bold text-white">{i + 1}</span>
+                    <div><p className="text-sm">{st.description}</p><p className="mt-0.5 font-mono text-[11px] text-muted">{st.path}</p></div>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          )}
+          {step === 3 && (
+            <div className="flex flex-col items-center py-8 text-center">
+              <span className="grid size-16 place-items-center rounded-full bg-emerald-500/10 text-emerald-600"><CheckCircle2 className="size-9" /></span>
+              <p className="mt-4 text-lg font-bold">Server PPPoE siap!</p>
+              <p className="mt-1 max-w-sm text-sm text-muted">Sekarang buat paket PPPoE dan tambahkan pelanggan di menu <b>Pelanggan</b>. Fitur isolir otomatis juga sudah aktif.</p>
+            </div>
+          )}
+        </>
+      )}
+    </Modal>
+  );
+}
+
+function RouterCard({ r, onSetup, onPppoe }: { r: Router; onSetup: () => void; onPppoe: () => void }) {
   const qc = useQueryClient();
   const info = useQuery({ queryKey: ['router-info', r.id], queryFn: () => api<RouterInfo>(`/routers/${r.id}/info`), refetchInterval: 15_000, retry: 0 });
   const del = useMutation({
@@ -217,16 +298,19 @@ function RouterCard({ r, onSetup }: { r: Router; onSetup: () => void }) {
         </div>
       )}
       <div className="mt-5 flex flex-wrap items-center gap-3 border-t pt-4">
-        {r.hotspotServer ? (
-          <span className="text-sm text-muted">Hotspot <b className="text-[var(--text)]">{r.hotspotServer}</b> • login di <b className="text-[var(--text)]">{r.dnsName}</b></span>
-        ) : (
-          <span className="text-sm text-muted">Hotspot belum disiapkan lewat Wifinate.</span>
-        )}
-        <div className="flex-1" />
-        {r.lastSeenAt && <span className="text-xs text-muted">Sinkron {relative(r.lastSeenAt)}</span>}
-        <Button size="sm" variant={r.hotspotServer ? 'secondary' : 'primary'} icon={Wand2} onClick={onSetup} disabled={!online}>
-          {r.hotspotServer ? 'Atur ulang hotspot' : 'Siapkan hotspot'}
-        </Button>
+        <div className="flex-1 space-y-0.5 text-sm text-muted">
+          <p>Hotspot: {r.hotspotServer ? <><b className="text-[var(--text)]">{r.hotspotServer}</b> • login di <b className="text-[var(--text)]">{r.dnsName}</b></> : 'belum disiapkan'}</p>
+          <p>PPPoE: {r.pppLocalAddress ? <><b className="text-[var(--text)]">aktif</b> • gateway {r.pppLocalAddress}</> : 'belum disiapkan'}</p>
+          {r.lastSeenAt && <p className="text-xs">Sinkron {relative(r.lastSeenAt)}</p>}
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button size="sm" variant={r.hotspotServer ? 'secondary' : 'primary'} icon={Wand2} onClick={onSetup} disabled={!online}>
+            {r.hotspotServer ? 'Atur ulang hotspot' : 'Siapkan hotspot'}
+          </Button>
+          <Button size="sm" variant="secondary" icon={Network} onClick={onPppoe} disabled={!online}>
+            {r.pppLocalAddress ? 'Atur ulang PPPoE' : 'Siapkan PPPoE'}
+          </Button>
+        </div>
       </div>
     </div>
   );
@@ -236,6 +320,7 @@ export default function Routers() {
   const { data, isLoading } = useRouters();
   const [adding, setAdding] = useState(false);
   const [setup, setSetup] = useState<Router | null>(null);
+  const [pppoe, setPppoe] = useState<Router | null>(null);
   return (
     <>
       <PageHeader title="Router" description="Hubungkan MikroTik Anda. Bisa lebih dari satu lokasi."
@@ -246,10 +331,11 @@ export default function Routers() {
             action={<Button icon={Plus} onClick={() => setAdding(true)}>Tambah router</Button>} />
         </div>
       ) : (
-        <div className="grid gap-4 xl:grid-cols-2">{data.map((r) => <RouterCard key={r.id} r={r} onSetup={() => setSetup(r)} />)}</div>
+        <div className="grid gap-4 xl:grid-cols-2">{data.map((r) => <RouterCard key={r.id} r={r} onSetup={() => setSetup(r)} onPppoe={() => setPppoe(r)} />)}</div>
       )}
       <AddRouter open={adding} onClose={() => setAdding(false)} />
       {setup && <HotspotWizard router={setup} onClose={() => setSetup(null)} />}
+      {pppoe && <PppoeWizard router={pppoe} onClose={() => setPppoe(null)} />}
     </>
   );
 }

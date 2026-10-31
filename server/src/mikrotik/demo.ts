@@ -1,10 +1,19 @@
 import type {
-  ActiveSession, HotspotUserInput, HotspotUserStat, PppActive, RosCommand, RouterDriver, RouterInfo, RouterInterface,
+  ActiveSession, HotspotUserInput, HotspotUserStat, PppActive, PppSecret, RosCommand, RouterDriver, RouterInfo,
+  RouterInterface, TrafficSample,
 } from './types.js';
 
 interface DemoUser extends HotspotUserInput { uptimeSec: number; bytes: number; online: boolean; mac: string; ip: string }
 
 const states = new Map<number, Map<string, DemoUser>>();
+const pppStates = new Map<number, Map<string, PppSecret & { online: boolean; since: number; ip: string }>>();
+
+/** Contoh pelanggan PPPoE yang sudah ada di router demo (untuk mencoba fitur impor). */
+const DEMO_SECRETS: PppSecret[] = [
+  { name: 'budi-rumah', password: 'budi123', profile: 'paket-10M', service: 'pppoe', disabled: false, comment: 'Budi - Jl. Melati 3' },
+  { name: 'warung-sari', password: 'sari456', profile: 'paket-20M', service: 'pppoe', disabled: false, comment: 'Warung Bu Sari' },
+  { name: 'kos-anggrek', password: 'kos789', profile: 'paket-20M', service: 'pppoe', disabled: false, comment: 'Kos Anggrek lt.2' },
+];
 
 /**
  * Router simulasi: supaya pemilik usaha bisa mencoba semua fitur tanpa MikroTik asli.
@@ -14,9 +23,16 @@ export class DemoDriver implements RouterDriver {
   private users: Map<string, DemoUser>;
   private started = Date.now();
 
+  private ppp: Map<string, PppSecret & { online: boolean; since: number; ip: string }>;
+  private wave = Math.random() * 10;
+
   constructor(private routerId: number) {
     if (!states.has(routerId)) states.set(routerId, new Map());
     this.users = states.get(routerId)!;
+    if (!pppStates.has(routerId)) {
+      pppStates.set(routerId, new Map(DEMO_SECRETS.map((s, i) => [s.name, { ...s, online: true, since: Date.now() - (i + 1) * 3_600_000 * 7, ip: `172.16.0.${11 + i}` }])));
+    }
+    this.ppp = pppStates.get(routerId)!;
   }
 
   private tick() {
@@ -95,10 +111,46 @@ export class DemoDriver implements RouterDriver {
   }
 
   async pppActive(): Promise<PppActive[]> {
-    return [
-      { name: 'budi-rumah', service: 'pppoe', address: '172.16.0.11', callerId: 'D4:6E:0E:11:22:33', uptimeSec: 86400 * 2 + 3600 },
-      { name: 'warung-sari', service: 'pppoe', address: '172.16.0.12', callerId: 'D4:6E:0E:44:55:66', uptimeSec: 7200 },
-    ];
+    return [...this.ppp.values()].filter((p) => p.online && !p.disabled).map((p) => ({
+      name: p.name, service: 'pppoe', address: p.ip, callerId: `D4:6E:0E:00:${p.ip.split('.')[3].padStart(2, '0')}:01`,
+      uptimeSec: Math.floor((Date.now() - p.since) / 1000),
+    }));
+  }
+
+  async upsertPppProfile() {}
+
+  async upsertPppSecret(sec: { name: string; password: string; profile: string; comment?: string; disabled?: boolean }) {
+    const cur = this.ppp.get(sec.name);
+    this.ppp.set(sec.name, {
+      name: sec.name, password: sec.password, profile: sec.profile, service: 'pppoe', disabled: !!sec.disabled,
+      comment: sec.comment ?? '', online: cur?.online ?? Math.random() < 0.8, since: cur?.since ?? Date.now(),
+      ip: cur?.ip ?? `172.16.0.${20 + this.ppp.size}`,
+    });
+  }
+
+  async setPppSecret(name: string, patch: { profile?: string; disabled?: boolean; password?: string }) {
+    const cur = this.ppp.get(name);
+    if (!cur) throw new Error(`Akun PPPoE "${name}" tidak ada di router`);
+    Object.assign(cur, Object.fromEntries(Object.entries(patch).filter(([, v]) => v !== undefined)));
+  }
+
+  async removePppSecret(name: string) { this.ppp.delete(name); }
+
+  async kickPpp(name: string) {
+    const cur = this.ppp.get(name);
+    if (cur) { cur.since = Date.now(); cur.online = !cur.disabled; }
+  }
+
+  async pppSecrets(): Promise<PppSecret[]> {
+    return [...this.ppp.values()].map(({ online: _o, since: _s, ip: _i, ...s }) => s);
+  }
+
+  async monitorTraffic(iface: string): Promise<TrafficSample> {
+    this.wave += 0.35;
+    const base = iface === 'ether1' ? 45e6 : 18e6;
+    const rx = Math.max(0, base + Math.sin(this.wave) * base * 0.35 + (Math.random() - 0.5) * base * 0.4);
+    const tx = Math.max(0, rx * (0.12 + Math.random() * 0.08));
+    return { rx: Math.round(rx), tx: Math.round(tx) };
   }
 
   async backup() {}
