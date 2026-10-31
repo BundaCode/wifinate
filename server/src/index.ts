@@ -7,7 +7,7 @@ import jwt from '@fastify/jwt';
 import fastifyStatic from '@fastify/static';
 import websocket from '@fastify/websocket';
 import { ZodError } from 'zod';
-import { APP_SECRET, HOST, IS_PROD, PORT } from './config.js';
+import { APP_SECRET, HOST, IS_PROD, PORT, TRUST_PROXY } from './config.js';
 import './db.js';
 import authRoutes from './routes/auth.js';
 import routerRoutes from './routes/routers.js';
@@ -16,11 +16,18 @@ import pppoeRoutes, { trafficWs } from './routes/pppoe.js';
 import pageRoutes, { startIsolirServer } from './routes/pages.js';
 import lanRoutes from './routes/lan.js';
 import resellerRoutes from './routes/resellers.js';
+import backupRoutes from './routes/backup.js';
 import { startScheduler } from './services/scheduler.js';
 
 const app = Fastify({
-  logger: { level: process.env.LOG_LEVEL ?? 'info' },
-  trustProxy: true,
+  logger: {
+    level: process.env.LOG_LEVEL ?? 'info',
+    serializers: {
+      // Catat path saja tanpa query string, dan jangan catat header (Authorization).
+      req: (req) => ({ method: req.method, url: req.url.split('?')[0], remoteAddress: req.ip }),
+    },
+  },
+  trustProxy: TRUST_PROXY,
 });
 
 await app.register(cors, { origin: IS_PROD ? false : true });
@@ -50,6 +57,7 @@ await app.register(trafficWs);
 await app.register(pageRoutes);
 await app.register(lanRoutes);
 await app.register(resellerRoutes);
+await app.register(backupRoutes);
 
 // Produksi: server sekaligus menyajikan tampilan web hasil build Vite.
 const webDist = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../web/dist');

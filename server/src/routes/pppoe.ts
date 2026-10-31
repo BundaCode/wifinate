@@ -8,7 +8,7 @@ import {
   activateCustomer, createCustomer, customerBody, deleteCustomer, disableCustomer, getCustomer, importCustomers,
   isolateCustomer, listImportable, payCustomer, planPppoe, pppoeSetupSchema, syncPlanToRouters, updateCustomer, voidInvoice,
 } from '../services/pppoe.js';
-import { requireAdmin, requireAuth } from './auth.js';
+import { consumeWsTicket, requireAdmin, requireAuth } from './auth.js';
 
 const planBody = z.object({
   name: z.string().min(1, 'Nama paket wajib diisi'),
@@ -199,14 +199,12 @@ export default async function pppoeRoutes(app: FastifyInstance) {
 export async function trafficWs(app: FastifyInstance) {
   // ---------- Trafik live (WebSocket) ----------
   app.get('/api/ws/traffic', { websocket: true }, (socket, req) => {
-    // Token dikirim lewat query karena browser tidak bisa set header di WebSocket.
-    const q = req.query as { token?: string; routerId?: string; iface?: string };
+    // Tiket sekali pakai (didapat dari POST /api/auth/ws-ticket). Token login tidak pernah ada di URL.
+    const q = req.query as { ticket?: string; routerId?: string; iface?: string };
     let stopped = false;
-    try {
-      const u = app.jwt.verify<{ role: string }>(q.token ?? '');
-      if (u.role === 'reseller') throw new Error('forbidden');
-    } catch {
-      socket.send(JSON.stringify({ error: 'Sesi berakhir, silakan login kembali.' }));
+    const user = consumeWsTicket(q.ticket);
+    if (!user || user.role === 'reseller') {
+      socket.send(JSON.stringify({ error: 'Sesi berakhir, silakan muat ulang halaman.' }));
       socket.close();
       return;
     }

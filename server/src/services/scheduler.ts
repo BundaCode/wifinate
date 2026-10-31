@@ -4,6 +4,7 @@ import { friendlyRouterError, getDriver } from '../mikrotik/pool.js';
 import { SCHEDULER_INTERVAL_MS } from '../config.js';
 import { billingCycle } from './pppoe.js';
 import { notifyCycle } from './notify.js';
+import { dailyBackup } from './backup.js';
 
 /**
  * Penjadwal voucher. Setiap interval, untuk setiap router:
@@ -112,6 +113,8 @@ export async function syncAll() {
       lastBilling = Date.now();
       await billingCycle().catch((e) => console.error('billingCycle', e));
       await notifyCycle().catch((e) => console.error('notifyCycle', e));
+      // Backup otomatis sekali sehari (mulai pukul 03.00, atau saat pertama jalan jika terlewat).
+      if (new Date().getHours() >= 3) await dailyBackup((m) => console.log(m)).catch((e) => console.error('backup', e));
     }
   } finally {
     running = false;

@@ -84,4 +84,16 @@ docs/     Skenario & rencana pengembangan
 ## Keamanan
 
 - Password pengguna di-hash dengan **scrypt**.
-- Password router disimpan terenkripsi **AES-256-GCM** dengan kunci di `data/secret.key` (dibuat otomatis — **jangan dibagikan**, ikut backup folder `data`).
+- Password router disimpan terenkripsi **AES-256-GCM** dengan kunci di `data/secret.key` (dibuat otomatis — **jangan dibagikan**).
+- **Batas percobaan login**: 5× salah untuk satu akun dari satu IP (atau 20× dari satu IP) → dikunci 15 menit.
+- **Sesi bisa dibatalkan**: ganti password atau *Keluar dari semua perangkat* (menu Akun saya) langsung membatalkan semua login lama. Akun yang dihapus/nonaktif langsung keluar.
+- Grafik live memakai **tiket sekali pakai (30 detik)**, token login tidak pernah masuk URL. Log server tidak mencatat query string maupun header.
+- Jika Wifinate dipasang di belakang reverse proxy (Caddy/Nginx), isi `TRUST_PROXY=1` agar IP pengunjung terbaca benar. Tanpa reverse proxy biarkan `0` (default) supaya IP tidak bisa dipalsukan.
+
+## Backup & pulihkan
+
+- **Otomatis** setiap hari (mulai pukul 03.00) ke `data/backups/`, 14 hari terakhir disimpan.
+- **Pengaturan → Backup & pulihkan**: unduh backup kapan saja (file `.wifinate`), pulihkan dari file atau dari backup otomatis.
+- File backup berisi database **dan** `secret.key`, jadi password router tetap terbaca setelah dipulihkan. Simpan di tempat aman.
+- Saat memulihkan, data lama disimpan di `data/backups/sebelum-pulihkan-*`, lalu aplikasi **menyalakan ulang dirinya sendiri**.
+  Dengan Docker (`restart: unless-stopped`) ini otomatis. Tanpa Docker, jalankan dengan pengelola proses seperti `pm2` atau systemd agar langsung hidup lagi.

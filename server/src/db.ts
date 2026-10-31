@@ -1,10 +1,9 @@
-import path from 'node:path';
 import Database from 'better-sqlite3';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
-import { DATA_DIR } from './config.js';
+import { DB_PATH } from './config.js';
 import * as schema from './schema.js';
 
-export const sqlite = new Database(process.env.DB_FILE ?? path.join(DATA_DIR, 'wifinate.db'));
+export const sqlite = new Database(DB_PATH);
 
 // Pengaturan performa: WAL agar baca & tulis bisa bersamaan, sinkron NORMAL cukup aman dengan WAL.
 sqlite.pragma('journal_mode = WAL');
@@ -204,6 +203,10 @@ const migrations: string[] = [
     created_at INTEGER NOT NULL
   );
   CREATE INDEX notifications_created ON notifications(created_at);
+  `,
+  // Keamanan: versi token untuk membatalkan sesi saat password diganti / keluar dari semua perangkat
+  `
+  ALTER TABLE users ADD COLUMN token_version INTEGER NOT NULL DEFAULT 0;
   `,
 ];
 

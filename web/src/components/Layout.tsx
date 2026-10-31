@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { useTheme } from '@/lib/theme';
+import AccountModal from './AccountModal';
 
 const nav = [
   { to: '/', label: 'Beranda', icon: LayoutDashboard, end: true, mobile: true },
@@ -36,6 +37,7 @@ export default function Layout() {
   const { user, signOut } = useAuth();
   const { dark, toggle } = useTheme();
   const [open, setOpen] = useState(false);
+  const [account, setAccount] = useState(false);
   const loc = useLocation();
   const items = user?.role === 'reseller'
     ? [{ to: '/', label: 'Beranda', icon: LayoutDashboard, end: true, mobile: false }]
@@ -63,13 +65,15 @@ export default function Layout() {
       </nav>
       <div className="m-3 rounded-2xl border bg-[var(--surface-2)] p-3">
         <div className="flex items-center gap-3">
-          <span className="grid size-9 place-items-center rounded-full bg-brand-600 text-sm font-bold text-white">
-            {user?.name.slice(0, 1).toUpperCase()}
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-bold">{user?.name}</p>
-            <p className="text-xs capitalize text-muted">{user?.role}</p>
-          </div>
+          <button onClick={() => { setOpen(false); setAccount(true); }} className="flex min-w-0 flex-1 items-center gap-3 rounded-xl text-left" title="Akun saya">
+            <span className="grid size-9 shrink-0 place-items-center rounded-full bg-brand-600 text-sm font-bold text-white">
+              {user?.name.slice(0, 1).toUpperCase()}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-sm font-bold">{user?.name}</span>
+              <span className="block text-xs text-muted"><span className="capitalize">{user?.role}</span> • Akun saya</span>
+            </span>
+          </button>
           <button onClick={signOut} className="rounded-lg p-2 text-muted hover:bg-[var(--surface)] hover:text-rose-600" title="Keluar">
             <LogOut className="size-4" />
           </button>
@@ -99,6 +103,8 @@ export default function Layout() {
           {dark ? <Sun className="size-4" /> : <Moon className="size-4" />}
         </button>
       </header>
+
+      {account && <AccountModal onClose={() => setAccount(false)} />}
 
       <main className="mx-auto max-w-7xl px-4 py-6 pb-28 sm:px-6 lg:px-8 lg:pb-10">
         <Outlet />

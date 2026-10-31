@@ -2,9 +2,10 @@ import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import clsx from 'clsx';
-import { Save, Store, Ticket, Users, Plus, Trash2, LogIn, ShieldAlert, Download, MessageCircle, Send, CheckCircle2, XCircle, Clock } from 'lucide-react';
+import { Save, Store, Ticket, Users, Plus, Trash2, LogIn, ShieldAlert, Download, MessageCircle, Send, CheckCircle2, XCircle, Clock, DatabaseBackup } from 'lucide-react';
 import { dateTime } from '@/lib/format';
 import PagePreview from '@/components/PagePreview';
+import BackupSection from '@/components/BackupSection';
 import { openFile } from '@/lib/api';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
@@ -254,6 +255,10 @@ export default function Settings() {
         <NotifySection s={s} set={set} dirty={dirty} />
 
         <UsersSection />
+
+        <Section icon={DatabaseBackup} title="Backup & pulihkan" description="Simpan salinan seluruh data (voucher, pelanggan, tagihan, saldo reseller, pengaturan) dan kembalikan bila perlu.">
+          <BackupSection />
+        </Section>
       </div>
     </>
   );

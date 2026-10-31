@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { and, desc, eq } from 'drizzle-orm';
+import { and, desc, eq, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { db, schema, sqlite } from '../db.js';
 import { hashPassword } from '../crypto.js';
@@ -82,7 +82,10 @@ export default async function resellerRoutes(app: FastifyInstance) {
       }).partial().parse(req.body);
       const { password, ...rest } = body;
       const patch: Partial<typeof schema.users.$inferInsert> = { ...rest };
-      if (password) patch.passwordHash = hashPassword(password);
+      if (password) {
+        patch.passwordHash = hashPassword(password);
+        patch.tokenVersion = sql`${schema.users.tokenVersion} + 1` as unknown as number;
+      }
       db.update(schema.users).set(patch).where(and(eq(schema.users.id, id(req)), eq(schema.users.role, 'reseller'))).run();
       return { ok: true };
     });

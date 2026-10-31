@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { ArrowDown, ArrowUp, Radio } from 'lucide-react';
 import clsx from 'clsx';
-import { api, getToken } from '@/lib/api';
+import { api } from '@/lib/api';
 import { bps } from '@/lib/format';
 import type { RouterInterface } from '@/lib/types';
 import { Select } from './ui';
@@ -36,17 +36,23 @@ export default function LiveTraffic({ routerId }: { routerId: number }) {
     if (!current) return;
     setPoints([]);
     setError(null);
-    const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-    const ws = new WebSocket(`${proto}://${location.host}/api/ws/traffic?routerId=${routerId}&iface=${encodeURIComponent(current)}&token=${encodeURIComponent(getToken() ?? '')}`);
-    ws.onopen = () => setConnected(true);
-    ws.onclose = () => setConnected(false);
-    ws.onmessage = (m) => {
-      const d = JSON.parse(m.data);
-      if (d.error) { setError(d.error); return; }
-      setError(null);
-      setPoints((p) => [...p.slice(-(MAX_POINTS - 1)), d]);
-    };
-    return () => ws.close();
+    let ws: WebSocket | null = null;
+    let cancelled = false;
+    // Minta tiket sekali pakai dulu — token login tidak pernah dikirim lewat URL.
+    api<{ ticket: string }>('/auth/ws-ticket', { method: 'POST' }).then(({ ticket }) => {
+      if (cancelled) return;
+      const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+      ws = new WebSocket(`${proto}://${location.host}/api/ws/traffic?routerId=${routerId}&iface=${encodeURIComponent(current)}&ticket=${encodeURIComponent(ticket)}`);
+      ws.onopen = () => setConnected(true);
+      ws.onclose = () => setConnected(false);
+      ws.onmessage = (m) => {
+        const d = JSON.parse(m.data);
+        if (d.error) { setError(d.error); return; }
+        setError(null);
+        setPoints((p) => [...p.slice(-(MAX_POINTS - 1)), d]);
+      };
+    }).catch((e) => setError((e as Error).message));
+    return () => { cancelled = true; ws?.close(); };
   }, [routerId, current]);
 
   // Interface diurutkan: yang aktif (kabel tersambung) di atas.

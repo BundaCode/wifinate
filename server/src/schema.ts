@@ -11,6 +11,8 @@ export const users = sqliteTable('users', {
   discountPct: integer('discount_pct').notNull().default(0),
   phone: text('phone'),
   active: integer('active', { mode: 'boolean' }).notNull().default(true),
+  /** Naik setiap password diganti / keluar dari semua perangkat → token lama tidak berlaku. */
+  tokenVersion: integer('token_version').notNull().default(0),
   createdAt: integer('created_at').notNull(),
 });
 
