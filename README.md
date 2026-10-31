@@ -27,6 +27,8 @@ Aplikasi web untuk mengelola **bisnis WiFi voucher (hotspot) & PPPoE MikroTik**.
 | 👥 **Multi pengguna** | Admin (akses penuh), kasir (buat/cetak voucher, terima pembayaran), reseller (hanya beli & cetak voucher miliknya). |
 | 🧪 **Router demo** | Coba semua fitur tanpa MikroTik asli. |
 
+📘 **Baru mulai? Ikuti [Tutorial usaha WiFi voucher dengan MikroTik 5 port](docs/TUTORIAL-VOUCHER.md)** — dari router baru sampai voucher pertama terjual.
+
 Rencana tahap berikutnya ada di [docs/SKENARIO.md](docs/SKENARIO.md).
 
 ## Teknologi
