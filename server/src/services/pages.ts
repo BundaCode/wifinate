@@ -121,7 +121,7 @@ export function previewMikrotik(html: string): string {
     .replace(/\$\(if [^)]+\)[\s\S]*?\$\(endif\)/g, '')
     .replace(/<script[\s\S]*?<\/script>/g, '')
     .replace(/\$\([^)]+\)/g, '')
-    .replace(/onsubmit="return doLogin\(\)"/, 'onsubmit="return false"');
+    .replace(/ onsubmit="return doLogin\(\)"/, '');
 }
 
 export interface IsolirInfo { name: string; amount: number; periods: string[] }

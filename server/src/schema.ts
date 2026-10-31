@@ -189,3 +189,17 @@ export const resellerLedger = sqliteTable('reseller_ledger', {
   createdBy: integer('created_by'),
   createdAt: integer('created_at').notNull(),
 });
+
+// ---------- Notifikasi WhatsApp (tahap 3) ----------
+
+export const notifications = sqliteTable('notifications', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  /** Kunci unik agar pesan yang sama tidak terkirim dua kali. */
+  key: text('key').notNull().unique(),
+  kind: text('kind').notNull(),
+  target: text('target').notNull(),
+  message: text('message').notNull(),
+  status: text('status', { enum: ['pending', 'sent', 'failed'] }).notNull(),
+  error: text('error'),
+  createdAt: integer('created_at').notNull(),
+});

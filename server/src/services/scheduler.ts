@@ -3,6 +3,7 @@ import { db, schema, sqlite } from '../db.js';
 import { friendlyRouterError, getDriver } from '../mikrotik/pool.js';
 import { SCHEDULER_INTERVAL_MS } from '../config.js';
 import { billingCycle } from './pppoe.js';
+import { notifyCycle } from './notify.js';
 
 /**
  * Penjadwal voucher. Setiap interval, untuk setiap router:
@@ -110,6 +111,7 @@ export async function syncAll() {
     if (Date.now() - lastBilling >= 60_000) {
       lastBilling = Date.now();
       await billingCycle().catch((e) => console.error('billingCycle', e));
+      await notifyCycle().catch((e) => console.error('notifyCycle', e));
     }
   } finally {
     running = false;

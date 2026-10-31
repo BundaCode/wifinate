@@ -2,14 +2,15 @@ import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import clsx from 'clsx';
-import { Save, Store, Ticket, Users, Plus, Trash2, LogIn, ShieldAlert, Download } from 'lucide-react';
+import { Save, Store, Ticket, Users, Plus, Trash2, LogIn, ShieldAlert, Download, MessageCircle, Send, CheckCircle2, XCircle, Clock } from 'lucide-react';
+import { dateTime } from '@/lib/format';
 import PagePreview from '@/components/PagePreview';
 import { openFile } from '@/lib/api';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { useSettings } from '@/lib/queries';
 import type { Settings as S, User } from '@/lib/types';
-import { Badge, Button, Field, Input, Modal, PageHeader, Select, Skeleton, Toggle } from '@/components/ui';
+import { Badge, Button, Field, Input, Modal, PageHeader, Select, Skeleton, Tip, Toggle } from '@/components/ui';
 
 function sampleCode(s: S) {
   const sets = { numeric: '23456789', alpha: 'ABCDEFGHJKMNPQRSTUVWXYZ', alnum: 'ABCDEFGHJKMNPQRSTUVWXYZ23456789' };
@@ -27,8 +28,88 @@ function Section({ icon: Icon, title, description, children }: { icon: typeof St
         <h2 className="mt-3 font-bold">{title}</h2>
         <p className="mt-1 text-sm text-muted">{description}</p>
       </div>
-      <div className="space-y-4">{children}</div>
+      <div className="min-w-0 space-y-4">{children}</div>
     </div>
+  );
+}
+
+interface NotifLog { id: number; kind: string; target: string; message: string; status: 'pending' | 'sent' | 'failed'; error: string | null; createdAt: number }
+
+function NotifySection({ s, set, dirty }: { s: S; set: <K extends keyof S>(k: K, v: S[K]) => void; dirty: boolean }) {
+  const log = useQuery({ queryKey: ['notify-log'], queryFn: () => api<NotifLog[]>('/notify/log'), refetchInterval: 30_000 });
+  const test = useMutation({
+    mutationFn: () => api('/notify/test', { method: 'POST', json: {} }),
+    onSuccess: () => { toast.success('Pesan uji terkirim. Cek WhatsApp Anda.'); log.refetch(); },
+    onError: (e) => toast.error(e.message, { duration: 10_000 }),
+  });
+  const on = s.waProvider !== 'off';
+  return (
+    <Section icon={MessageCircle} title="Notifikasi WhatsApp" description="Kabar otomatis ke WA Anda (router mati, stok menipis, ringkasan harian) dan pengingat tagihan ke pelanggan.">
+      <Field label="Gateway WhatsApp">
+        <div className="flex flex-wrap gap-2">
+          {([['off', 'Mati'], ['fonnte', 'Fonnte'], ['webhook', 'Webhook kustom']] as const).map(([k, l]) => (
+            <button key={k} type="button" onClick={() => set('waProvider', k)} className={clsx('chip', s.waProvider === k && 'chip-active')}>{l}</button>
+          ))}
+        </div>
+      </Field>
+      {s.waProvider === 'fonnte' && (
+        <Tip>Daftar di <a className="font-semibold text-brand-600 underline" href="https://fonnte.com" target="_blank" rel="noreferrer">fonnte.com</a>, sambungkan nomor WA dengan scan QR, lalu salin <b>Token</b> perangkat ke sini.</Tip>
+      )}
+      {s.waProvider === 'webhook' && (
+        <Field label="URL webhook" hint='Wifinate mengirim POST JSON {"target":"62812…","message":"…"} dengan header Authorization: Bearer <token>.'>
+          <Input value={s.waWebhookUrl} onChange={(e) => set('waWebhookUrl', e.target.value)} placeholder="https://gateway-saya.com/send" />
+        </Field>
+      )}
+      {on && (
+        <>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Token" hint={s.waTokenSet ? 'Token tersimpan. Isi hanya jika ingin mengganti.' : undefined}>
+              <Input type="password" value={s.waToken} onChange={(e) => set('waToken', e.target.value)} placeholder={s.waTokenSet ? '•••••••• (tersimpan)' : 'Tempel token di sini'} autoComplete="off" />
+            </Field>
+            <Field label="Nomor WA pemilik" hint="Penerima notifikasi untuk Anda."><Input value={s.waOwnerNumber} inputMode="tel" onChange={(e) => set('waOwnerNumber', e.target.value)} placeholder="0812xxxx" /></Field>
+          </div>
+          <div className="grid gap-3 md:grid-cols-2">
+            <Toggle checked={s.notifyRouterDown} onChange={(v) => set('notifyRouterDown', v)} label="Router mati / hidup lagi" description="Dikirim jika router tidak bisa dihubungi lebih dari 2 menit." />
+            <Toggle checked={s.notifyIsolir} onChange={(v) => set('notifyIsolir', v)} label="Pelanggan diisolir otomatis" />
+            <Toggle checked={s.notifyPayment} onChange={(v) => set('notifyPayment', v)} label="Pembayaran PPPoE diterima" />
+            <Toggle checked={s.notifyCustomer} onChange={(v) => set('notifyCustomer', v)} label="Kirim ke pelanggan PPPoE" description="Pengingat H-3 & hari jatuh tempo, info isolir, dan ucapan terima kasih setelah bayar." />
+          </div>
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="rounded-xl border p-3.5">
+              <Toggle checked={s.notifyLowStock} onChange={(v) => set('notifyLowStock', v)} label="Stok voucher menipis" />
+              {s.notifyLowStock && <div className="mt-2 flex items-center gap-2 text-sm"><span className="text-muted">Jika kurang dari</span><Input className="h-9 w-24" type="number" min={1} value={s.lowStockThreshold} onChange={(e) => set('lowStockThreshold', Number(e.target.value))} /><span className="text-muted">voucher</span></div>}
+            </div>
+            <div className="rounded-xl border p-3.5">
+              <Toggle checked={s.notifyDailySummary} onChange={(v) => set('notifyDailySummary', v)} label="Ringkasan penjualan harian" />
+              {s.notifyDailySummary && <div className="mt-2 flex items-center gap-2 text-sm"><span className="text-muted">Dikirim pukul</span>
+                <Select className="h-9 w-28" value={s.dailySummaryHour} onChange={(e) => set('dailySummaryHour', Number(e.target.value))}>
+                  {Array.from({ length: 24 }, (_, h) => <option key={h} value={h}>{String(h).padStart(2, '0')}.00</option>)}
+                </Select></div>}
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <Button variant="secondary" icon={Send} loading={test.isPending} disabled={dirty} onClick={() => test.mutate()}>Kirim pesan uji</Button>
+            {dirty && <span className="text-xs text-muted">Simpan perubahan dulu sebelum menguji.</span>}
+          </div>
+        </>
+      )}
+      {!!log.data?.length && (
+        <div>
+          <p className="mb-2 text-sm font-semibold">Pesan terakhir</p>
+          <ul className="max-h-72 divide-y overflow-y-auto rounded-xl border">
+            {log.data.map((n) => (
+              <li key={n.id} className="flex gap-3 p-3 text-sm">
+                {n.status === 'sent' ? <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-500" /> : n.status === 'failed' ? <XCircle className="mt-0.5 size-4 shrink-0 text-rose-500" /> : <Clock className="mt-0.5 size-4 shrink-0 text-muted" />}
+                <div className="min-w-0 flex-1">
+                  <p className="truncate">{n.message.split('\n')[0].replace(/\*/g, '')}</p>
+                  <p className="text-xs text-muted">{dateTime(n.createdAt)} • ke {n.target}{n.error && <span className="text-rose-600"> • {n.error}</span>}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </Section>
   );
 }
 
@@ -87,7 +168,11 @@ export default function Settings() {
   const [s, setS] = useState<S | null>(null);
   useEffect(() => { if (data) setS(data); }, [data]);
   const save = useMutation({
-    mutationFn: (v: S) => api<S>('/settings', { method: 'PUT', json: v }),
+    mutationFn: (v: S) => {
+      // Field turunan (tidak disimpan) & token kosong tidak dikirim.
+      const { waTokenSet: _t, ...rest } = v;
+      return api<S>('/settings', { method: 'PUT', json: rest });
+    },
     onSuccess: (v) => { qc.setQueryData(['settings'], v); toast.success('Pengaturan tersimpan'); },
     onError: (e) => toast.error(e.message),
   });
@@ -165,6 +250,8 @@ export default function Settings() {
             <PagePreview kind="isolir" draft={s as unknown as Record<string, unknown>} />
           </div>
         </Section>
+
+        <NotifySection s={s} set={set} dirty={dirty} />
 
         <UsersSection />
       </div>

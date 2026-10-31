@@ -23,6 +23,7 @@ Aplikasi web untuk mengelola **bisnis WiFi voucher (hotspot) & PPPoE MikroTik**.
 | 📡 **Monitor** | **Grafik trafik live** per port (WebSocket, tiap detik), pelanggan hotspot & PPPoE yang sedang online. |
 | 🏢 **Jaringan kantor** | Wizard bagi jaringan per divisi (port sendiri / VLAN), DHCP otomatis, batas internet dibagi rata (PCQ), isolasi tamu, pemakaian live per divisi, ubah batas & hapus kapan saja. Gagal di tengah? Otomatis dibatalkan. |
 | 🏪 **Reseller** | Akun reseller (warung/konter) dengan **saldo deposit** & diskon. Reseller login, beli voucher dari saldo, cetak sendiri. Isi saldo, riwayat saldo, konfirmasi WA. Pendapatan dicatat saat reseller membeli. |
+| 🔔 **Notifikasi WhatsApp** | Lewat Fonnte atau webhook kustom: router mati/hidup lagi, stok voucher menipis, ringkasan harian, isolir & pembayaran PPPoE. Opsional ke pelanggan: pengingat H-3 & hari H, info isolir, terima kasih setelah bayar. Anti dobel & riwayat pesan. |
 | 👥 **Multi pengguna** | Admin (akses penuh), kasir (buat/cetak voucher, terima pembayaran), reseller (hanya beli & cetak voucher miliknya). |
 | 🧪 **Router demo** | Coba semua fitur tanpa MikroTik asli. |
 

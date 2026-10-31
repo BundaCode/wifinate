@@ -107,7 +107,29 @@ Catatan: RouterOS API tidak mendukung *Safe Mode* Winbox; sebagai gantinya Wifin
 4. Pembukuan: pendapatan dicatat **saat reseller membeli** (kanal *Reseller* di laporan). Saat voucher reseller dipakai pelanggan, tidak dicatat lagi (tidak dobel).
 5. Keamanan: akun reseller hanya bisa mengakses saldo, paket, beli & cetak voucher **miliknya sendiri**.
 
-## Rencana tahap berikutnya
+## Notifikasi WhatsApp (Tahap 3 — sudah tersedia)
 
-### Tahap 3 — Jaringan kantor & multi-lokasi
-- Notifikasi WhatsApp (stok voucher menipis, router offline).
+**Pengaturan → Notifikasi WhatsApp**:
+1. Pilih gateway: **Fonnte** (daftar di fonnte.com, scan QR, salin token) atau **Webhook kustom**
+   (Wifinate mengirim `POST {"target":"62812…","message":"…"}` dengan header `Authorization: Bearer <token>`).
+2. Isi nomor WA pemilik → **Kirim pesan uji**.
+3. Pilih notifikasi:
+
+| Notifikasi | Ke | Kapan |
+|---|---|---|
+| Router mati / hidup lagi | Pemilik | Router tidak bisa dihubungi > 2 menit, lalu saat kembali |
+| Stok voucher menipis | Pemilik | Stok paket < batas (sekali per hari per paket; voucher milik reseller tidak dihitung) |
+| Ringkasan harian | Pemilik | Pada jam yang dipilih: pendapatan voucher/reseller/PPPoE, tunggakan, status router |
+| Isolir otomatis | Pemilik (+ pelanggan) | Saat pelanggan diisolir otomatis |
+| Pembayaran diterima | Pemilik (+ pelanggan) | Saat tagihan PPPoE ditandai lunas |
+| Pengingat tagihan | Pelanggan | H-3 dan hari jatuh tempo |
+
+Setiap pesan punya kunci unik sehingga tidak terkirim dua kali; pesan yang gagal dicoba lagi otomatis. Token gateway tidak pernah dikirim ke browser.
+
+## Ide pengembangan berikutnya
+
+- Pembayaran online otomatis (QRIS / virtual account lewat Midtrans atau Xendit): tagihan langsung lunas & buka isolir tanpa admin.
+- Portal pelanggan: cek tagihan, riwayat bayar, dan ganti password WiFi sendiri.
+- Backup database otomatis (harian) & pulihkan dari halaman Pengaturan.
+- Catatan aktivitas (siapa mengubah apa) untuk multi admin/kasir.
+- Bisa dipasang sebagai aplikasi di HP (PWA).

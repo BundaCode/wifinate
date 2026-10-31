@@ -5,6 +5,7 @@ import { decrypt, encrypt } from '../crypto.js';
 import { friendlyRouterError, getDriverById } from '../mikrotik/pool.js';
 import type { RosCommand } from '../mikrotik/types.js';
 import { rateLimit } from './format.js';
+import { onCustomerIsolated, onPaymentReceived } from './notify.js';
 
 export const ISOLIR_PROFILE = 'wifinate-isolir';
 export const ISOLIR_LIST = 'wifinate-isolir';
@@ -210,6 +211,8 @@ export async function payCustomer(customerId: number, opts: { invoiceId?: number
       db.update(schema.customers).set({ syncError: routerError }).where(eq(schema.customers.id, c.id)).run();
     }
   }
+  const fresh = getCustomer(c.id);
+  onPaymentReceived(c, inv, fresh.nextDueAt, reactivated);
   return { invoice: { ...inv, status: 'paid' as const, paidAt: now, method: opts.method ?? 'tunai' }, reactivated, routerError };
 }
 
@@ -244,6 +247,8 @@ export async function billingCycle() {
     if (c.status !== 'active' || !c.autoIsolate || !hasOverdue(c.id, c.graceDays)) continue;
     try {
       await isolateCustomer(c.id);
+      const owed = (sqlite.prepare(`SELECT COALESCE(SUM(amount),0) AS t FROM invoices WHERE customer_id = ? AND status = 'unpaid'`).get(c.id) as { t: number }).t;
+      onCustomerIsolated(c, owed);
     } catch (e) {
       db.update(schema.customers).set({ syncError: `Gagal isolir otomatis: ${friendlyRouterError(e)}` }).where(eq(schema.customers.id, c.id)).run();
     }

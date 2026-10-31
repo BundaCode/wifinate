@@ -7,6 +7,7 @@ import { disableVouchers, generateVouchers } from '../services/vouchers.js';
 import { renderVouchersPdf } from '../services/pdf.js';
 import { salesRows, salesSummary, type SalesFilter } from '../services/reports.js';
 import { getSettings, saveSettings } from '../services/settings.js';
+import { sendWa } from '../services/notify.js';
 import { requireAdmin, requireAuth } from './auth.js';
 
 const packageBody = z.object({
@@ -42,7 +43,9 @@ export default async function businessRoutes(app: FastifyInstance) {
   app.addHook('preHandler', requireAuth);
 
   // ---------- Pengaturan ----------
-  app.get('/api/settings', async () => getSettings());
+  // Token gateway WA tidak pernah dikirim ke browser.
+  const publicSettings = () => { const { waToken, ...rest } = getSettings(); return { ...rest, waToken: '', waTokenSet: !!waToken }; };
+  app.get('/api/settings', async () => publicSettings());
   app.put('/api/settings', { preHandler: requireAdmin }, async (req) => {
     const body = z.object({
       businessName: z.string().min(1), phone: z.string(), address: z.string(), voucherFooter: z.string(),
@@ -52,9 +55,32 @@ export default async function businessRoutes(app: FastifyInstance) {
       serverUrl: z.string().max(200).refine((v) => v === '' || /^https?:\/\/[^/\s]+$/.test(v.replace(/\/$/, '')), 'Contoh: http://192.168.88.10:8080'),
       loginTitle: z.string().max(60), loginWelcome: z.string().max(200), loginShowPrices: z.boolean(),
       isolirMessage: z.string().max(500), paymentInfo: z.string().max(500),
+      waProvider: z.enum(['off', 'fonnte', 'webhook']), waToken: z.string().max(200), waWebhookUrl: z.string().max(300),
+      waOwnerNumber: z.string().max(20), notifyRouterDown: z.boolean(), notifyLowStock: z.boolean(),
+      lowStockThreshold: z.coerce.number().int().min(1).max(1000), notifyDailySummary: z.boolean(),
+      dailySummaryHour: z.coerce.number().int().min(0).max(23), notifyIsolir: z.boolean(), notifyPayment: z.boolean(), notifyCustomer: z.boolean(),
     }).partial().parse(req.body);
-    return saveSettings(body);
+    // Token kosong = tidak diubah (browser tidak pernah menerima token lama).
+    if (!body.waToken) delete body.waToken;
+    saveSettings(body);
+    return publicSettings();
   });
+
+  app.post('/api/notify/test', { preHandler: requireAdmin }, async (req, reply) => {
+    const { target } = z.object({ target: z.string().optional() }).parse(req.body ?? {});
+    const s = getSettings();
+    const to = target || s.waOwnerNumber;
+    if (!to) return reply.code(400).send({ message: 'Isi nomor WA pemilik terlebih dahulu.' });
+    try {
+      await sendWa(to, `✅ Tes notifikasi Wifinate berhasil.\nPesan dari ${s.businessName}.`, s);
+      return { ok: true };
+    } catch (e) {
+      return reply.code(502).send({ message: `Gagal mengirim: ${(e as Error).message}` });
+    }
+  });
+
+  app.get('/api/notify/log', { preHandler: requireAdmin }, async () =>
+    db.select().from(schema.notifications).orderBy(desc(schema.notifications.id)).limit(50).all());
 
   // ---------- Paket ----------
   app.get('/api/packages', async () => {

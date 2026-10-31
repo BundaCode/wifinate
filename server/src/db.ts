@@ -191,6 +191,20 @@ const migrations: string[] = [
   );
   CREATE INDEX reseller_ledger_user ON reseller_ledger(user_id, created_at);
   `,
+  // Tahap 3: notifikasi WhatsApp
+  `
+  CREATE TABLE notifications (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    key TEXT NOT NULL UNIQUE,
+    kind TEXT NOT NULL,
+    target TEXT NOT NULL,
+    message TEXT NOT NULL,
+    status TEXT NOT NULL,
+    error TEXT,
+    created_at INTEGER NOT NULL
+  );
+  CREATE INDEX notifications_created ON notifications(created_at);
+  `,
 ];
 
 function migrate() {
