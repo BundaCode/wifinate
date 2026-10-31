@@ -1,4 +1,4 @@
-export interface User { id: number; username: string; name: string; role: 'admin' | 'kasir' }
+export interface User { id: number; username: string; name: string; role: 'admin' | 'kasir' | 'reseller' }
 
 export interface Router {
   id: number; name: string; host: string; port: number; username: string; useTls: boolean; isDemo: boolean;
@@ -28,7 +28,7 @@ export interface Voucher {
 
 export interface Batch {
   id: number; count: number; note: string | null; createdAt: number; packageName: string; color: string; price: number;
-  routerName: string; unused: number;
+  routerName: string; unused: number; cost: number | null; resellerName: string | null;
 }
 
 export interface Settings {
@@ -41,7 +41,7 @@ export interface SalesSummary {
   totals: { revenue: number; count: number; average: number; perDay: number; prevRevenue: number; prevCount: number };
   series: { bucket: string; revenue: number; count: number }[];
   byPackage: { packageId: string; channel: 'hotspot' | 'pppoe'; name: string; color: string; revenue: number; count: number }[];
-  byChannel: { channel: 'hotspot' | 'pppoe'; revenue: number; count: number }[];
+  byChannel: { channel: 'hotspot' | 'pppoe' | 'reseller'; revenue: number; count: number }[];
   byRouter: { routerId: number; name: string; revenue: number; count: number }[];
   byHour: { hour: number; count: number; revenue: number }[];
 }
@@ -87,3 +87,14 @@ export interface CustomerSummary {
   collected: { total: number; n: number };
   mrr: number;
 }
+
+// ---------- Reseller ----------
+export interface LedgerEntry {
+  id: number; type: 'topup' | 'purchase' | 'refund' | 'adjust'; amount: number; balanceAfter: number; note: string | null; batchId: number | null; createdAt: number;
+}
+export interface ResellerStats { vouchers: number; unused: number; used: number; spentMonth: number; topupTotal: number }
+export interface Reseller {
+  id: number; name: string; username: string; phone: string | null; balance: number; discountPct: number; active: boolean; createdAt: number;
+  stats: ResellerStats;
+}
+export interface ResellerMe { name: string; phone: string | null; balance: number; discountPct: number; stats: ResellerStats; ledger: LedgerEntry[] }

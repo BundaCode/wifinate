@@ -31,7 +31,7 @@ function salesFilter(q: Record<string, string | undefined>): SalesFilter {
     from, to,
     routerId: q.routerId ? Number(q.routerId) : undefined,
     packageId: q.packageId ? Number(q.packageId) : undefined,
-    channel: q.channel === 'hotspot' || q.channel === 'pppoe' ? q.channel : undefined,
+    channel: q.channel === 'hotspot' || q.channel === 'pppoe' || q.channel === 'reseller' ? q.channel : undefined,
     tzOffsetMin: Number(q.tz ?? 420),
     granularity: (q.granularity as SalesFilter['granularity'])
       ?? (span <= 2 * 86_400_000 ? 'hour' : span > 120 * 86_400_000 ? 'month' : 'day'),
@@ -122,7 +122,7 @@ export default async function businessRoutes(app: FastifyInstance) {
       note: z.string().max(100).optional(),
     }).parse(req.body);
     try {
-      return await generateVouchers({ ...body, userId: req.user.id });
+      return await generateVouchers({ ...body, userId: req.user.id, resellerId: req.user.role === 'reseller' ? req.user.id : undefined });
     } catch (e) {
       if ((e as { statusCode?: number }).statusCode) throw e;
       return reply.code(502).send({ message: friendlyRouterError(e) });
@@ -138,15 +138,18 @@ export default async function businessRoutes(app: FastifyInstance) {
     }
   });
 
-  app.get('/api/batches', async () =>
+  app.get('/api/batches', async (req) =>
     db.select({
       id: schema.voucherBatches.id, count: schema.voucherBatches.count, note: schema.voucherBatches.note,
       createdAt: schema.voucherBatches.createdAt, packageName: schema.packages.name, color: schema.packages.color,
-      price: schema.packages.price, routerName: schema.routers.name,
+      price: schema.packages.price, routerName: schema.routers.name, cost: schema.voucherBatches.cost, resellerName: schema.users.name,
       unused: sql<number>`(SELECT COUNT(*) FROM vouchers v WHERE v.batch_id = ${schema.voucherBatches.id} AND v.status = 'new')`,
     }).from(schema.voucherBatches)
       .innerJoin(schema.packages, eq(schema.packages.id, schema.voucherBatches.packageId))
       .innerJoin(schema.routers, eq(schema.routers.id, schema.voucherBatches.routerId))
+      .leftJoin(schema.users, eq(schema.users.id, schema.voucherBatches.resellerId))
+      // Reseller hanya melihat batch miliknya sendiri.
+      .where(req.user.role === 'reseller' ? eq(schema.voucherBatches.resellerId, req.user.id) : undefined)
       .orderBy(desc(schema.voucherBatches.id)).limit(100).all());
 
   /** Cetak PDF: per batch atau per daftar id. Hanya voucher yang belum dipakai kecuali all=1. */
@@ -159,6 +162,11 @@ export default async function businessRoutes(app: FastifyInstance) {
     if (q.ids) conds.push(inArray(schema.vouchers.id, q.ids.split(',').map(Number).filter(Boolean)));
     if (!q.all) conds.push(eq(schema.vouchers.status, 'new'));
     if (!q.batchId && !q.ids) return reply.code(400).send({ message: 'Pilih batch atau voucher yang mau dicetak.' });
+    if (req.user.role === 'reseller') {
+      // Reseller hanya boleh mencetak batch miliknya.
+      const b = q.batchId ? db.select().from(schema.voucherBatches).where(eq(schema.voucherBatches.id, q.batchId)).get() : null;
+      if (!b || b.resellerId !== req.user.id || q.ids) return reply.code(403).send({ message: 'Voucher ini bukan milik Anda.' });
+    }
     const rows = db.select({
       code: schema.vouchers.code, password: schema.vouchers.password, price: schema.vouchers.price,
       packageName: schema.packages.name, validityMin: schema.packages.validityMin, uptimeLimitMin: schema.packages.uptimeLimitMin,
@@ -192,7 +200,7 @@ export default async function businessRoutes(app: FastifyInstance) {
       ['Waktu', 'Kode / Username', 'Pelanggan', 'Paket', 'Router', 'Jenis', 'Nominal', 'Status', 'MAC'].join(';'),
       ...(rows as Record<string, unknown>[]).map((r) => [
         new Date(Number(r.soldAt) + tz).toISOString().replace('T', ' ').slice(0, 19),
-        r.code, r.customerName, r.packageName, r.routerName, r.channel === 'pppoe' ? 'PPPoE' : 'Voucher', r.amount, r.status, r.mac,
+        r.code, r.customerName, r.packageName, r.routerName, ({ pppoe: 'PPPoE', reseller: 'Reseller', hotspot: 'Voucher' } as Record<string, string>)[String(r.channel)] ?? r.channel, r.amount, r.status, r.mac,
       ].map(esc).join(';')),
     ];
     // BOM agar Excel membaca UTF-8 dengan benar; pemisah ";" sesuai Excel lokal Indonesia.
@@ -221,11 +229,12 @@ export default async function businessRoutes(app: FastifyInstance) {
     const routerList = db.select({ id: schema.routers.id, name: schema.routers.name, lastStatus: schema.routers.lastStatus, lastError: schema.routers.lastError, isDemo: schema.routers.isDemo, lastSeenAt: schema.routers.lastSeenAt }).from(schema.routers).all();
     const recent = db.select({
       id: schema.sales.id, amount: schema.sales.amount, soldAt: schema.sales.soldAt, code: schema.vouchers.code,
-      packageName: schema.packages.name, color: schema.packages.color, channel: schema.sales.channel, customerName: schema.customers.name,
+      packageName: schema.packages.name, color: schema.packages.color, channel: schema.sales.channel, customerName: schema.customers.name, resellerName: schema.users.name,
     }).from(schema.sales)
       .leftJoin(schema.vouchers, eq(schema.vouchers.id, schema.sales.voucherId))
       .leftJoin(schema.customers, eq(schema.customers.id, schema.sales.customerId))
-      .leftJoin(schema.packages, and(eq(schema.packages.id, schema.sales.packageId), eq(schema.sales.channel, 'hotspot')))
+      .leftJoin(schema.users, and(eq(schema.users.id, schema.sales.userId), eq(schema.sales.channel, 'reseller')))
+      .leftJoin(schema.packages, and(eq(schema.packages.id, schema.sales.packageId), inArray(schema.sales.channel, ['hotspot', 'reseller'])))
       .where(gte(schema.sales.soldAt, startToday - 7 * 86_400_000))
       .orderBy(desc(schema.sales.soldAt)).limit(8).all();
     const packagesCount = db.select({ n: count() }).from(schema.packages).get()?.n ?? 0;

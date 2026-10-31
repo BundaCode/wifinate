@@ -26,7 +26,12 @@ function publicRouter(r: typeof schema.routers.$inferSelect) {
 export default async function routerRoutes(app: FastifyInstance) {
   app.addHook('preHandler', requireAuth);
 
-  app.get('/api/routers', async () => db.select().from(schema.routers).all().map(publicRouter));
+  app.get('/api/routers', async (req) => {
+    const list = db.select().from(schema.routers).all();
+    // Reseller cukup tahu nama router (untuk memilih lokasi voucher).
+    if (req.user.role === 'reseller') return list.map((r) => ({ id: r.id, name: r.name }));
+    return list.map(publicRouter);
+  });
 
   /** Tes koneksi sebelum disimpan. */
   app.post('/api/routers/test', async (req, reply) => {

@@ -169,6 +169,28 @@ const migrations: string[] = [
   );
   CREATE UNIQUE INDEX lan_router_slug ON lan_networks(router_id, slug);
   `,
+  // Tahap 3: reseller
+  `
+  ALTER TABLE users ADD COLUMN balance INTEGER NOT NULL DEFAULT 0;
+  ALTER TABLE users ADD COLUMN discount_pct INTEGER NOT NULL DEFAULT 0;
+  ALTER TABLE users ADD COLUMN phone TEXT;
+  ALTER TABLE users ADD COLUMN active INTEGER NOT NULL DEFAULT 1;
+  ALTER TABLE voucher_batches ADD COLUMN reseller_id INTEGER;
+  ALTER TABLE voucher_batches ADD COLUMN cost INTEGER;
+  ALTER TABLE vouchers ADD COLUMN reseller_id INTEGER;
+  CREATE TABLE reseller_ledger (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    type TEXT NOT NULL,
+    amount INTEGER NOT NULL,
+    balance_after INTEGER NOT NULL,
+    note TEXT,
+    batch_id INTEGER,
+    created_by INTEGER,
+    created_at INTEGER NOT NULL
+  );
+  CREATE INDEX reseller_ledger_user ON reseller_ledger(user_id, created_at);
+  `,
 ];
 
 function migrate() {

@@ -51,7 +51,7 @@ export default function Reports() {
   const [custom, setCustom] = useState({ from: toInput(new Date(Date.now() - 6 * 86_400_000)), to: toInput(new Date()) });
   const [routerId, setRouterId] = useState('');
   const [packageId, setPackageId] = useState('');
-  const [channel, setChannel] = useState<'' | 'hotspot' | 'pppoe'>('');
+  const [channel, setChannel] = useState<'' | 'hotspot' | 'pppoe' | 'reseller'>('');
   const [granularity, setGranularity] = useState<'' | 'hour' | 'day' | 'month'>('');
   const [metric, setMetric] = useState<'revenue' | 'count'>('revenue');
   const [search, setSearch] = useState('');
@@ -104,7 +104,7 @@ export default function Reports() {
           </div>
           <div className="flex-1" />
           <div className="inline-flex shrink-0 rounded-xl border p-0.5 text-sm">
-            {([['', 'Semua'], ['hotspot', 'Voucher'], ['pppoe', 'PPPoE']] as const).map(([k, l]) => (
+            {([['', 'Semua'], ['hotspot', 'Voucher'], ['reseller', 'Reseller'], ['pppoe', 'PPPoE']] as const).map(([k, l]) => (
               <button key={k} onClick={() => { setChannel(k); setPage(1); if (k === 'pppoe') setPackageId(''); }} className={clsx('rounded-lg px-3 py-1.5 font-semibold', channel === k ? 'bg-brand-600 text-white' : 'text-muted')}>{l}</button>
             ))}
           </div>
@@ -154,7 +154,7 @@ export default function Reports() {
           <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
             <StatCard label="Total pendapatan" value={rupiah(d.totals.revenue)} icon={Wallet} delta={delta(d.totals.revenue, d.totals.prevRevenue)} sub="vs periode sebelumnya" />
             <StatCard label={channel === 'pppoe' ? 'Pembayaran PPPoE' : channel === 'hotspot' ? 'Voucher terjual' : 'Transaksi'} value={num(d.totals.count)} icon={Receipt} tone="sky" delta={delta(d.totals.count, d.totals.prevCount)}
-              sub={!channel && d.byChannel.length > 1 ? `${num(chRev('hotspot')?.count ?? 0)} voucher • ${num(chRev('pppoe')?.count ?? 0)} PPPoE` : 'vs periode sebelumnya'} />
+              sub={!channel && d.byChannel.length > 1 ? [`${num(chRev('hotspot')?.count ?? 0)} voucher`, chRev('reseller') && `${num(chRev('reseller')!.count)} reseller`, `${num(chRev('pppoe')?.count ?? 0)} PPPoE`].filter(Boolean).join(' • ') : 'vs periode sebelumnya'} />
             <StatCard label="Rata-rata per hari" value={rupiah(d.totals.perDay)} icon={TrendingUp} tone="green" sub={`Rata-rata ${rupiah(d.totals.average)} / ${channel === "hotspot" ? "voucher" : "transaksi"}`} />
             <StatCard label="Penyumbang terbesar" value={d.byPackage[0]?.name ?? '—'} icon={BarChart3} tone="amber" sub={d.byPackage[0] ? `${num(d.byPackage[0].count)} terjual` : 'Belum ada data'} />
           </div>
@@ -198,7 +198,7 @@ export default function Reports() {
               <h3 className="font-bold">Pendapatan per paket</h3>
               <p className="mb-4 text-sm text-muted">
                 {!channel && d.byChannel.length > 1
-                  ? <>Voucher <b className="text-[var(--text)]">{rupiah(chRev('hotspot')?.revenue ?? 0)}</b> • PPPoE <b className="text-[var(--text)]">{rupiah(chRev('pppoe')?.revenue ?? 0)}</b></>
+                  ? <>Voucher <b className="text-[var(--text)]">{rupiah(chRev('hotspot')?.revenue ?? 0)}</b>{chRev('reseller') && <> • Reseller <b className="text-[var(--text)]">{rupiah(chRev('reseller')!.revenue)}</b></>} • PPPoE <b className="text-[var(--text)]">{rupiah(chRev('pppoe')?.revenue ?? 0)}</b></>
                   : 'Paket mana yang paling menghasilkan.'}
               </p>
               {d.byPackage.length === 0 ? <p className="py-10 text-center text-sm text-muted">Belum ada data.</p> : (
@@ -287,10 +287,10 @@ export default function Reports() {
                   {rows.data?.rows.map((r) => (
                     <tr key={r.id}>
                       <td className="text-muted">{dateTime(r.soldAt)}</td>
-                      <td>{r.channel === 'pppoe' ? <span><b>{r.customerName}</b> <span className="font-mono text-xs text-muted">@{r.code}</span></span> : <span className="font-mono font-semibold">{r.code ?? '—'}</span>}</td>
+                      <td>{r.channel === 'reseller' ? <b>{r.customerName}</b> : r.channel === 'pppoe' ? <span><b>{r.customerName}</b> <span className="font-mono text-xs text-muted">@{r.code}</span></span> : <span className="font-mono font-semibold">{r.code ?? '—'}</span>}</td>
                       <td><span className="inline-flex items-center gap-2"><span className="size-2 rounded-full" style={{ background: r.packageColor }} />{r.packageName}</span></td>
                       <td className="text-muted">{r.routerName}</td>
-                      <td>{r.channel === 'pppoe' ? <Badge tone="blue">PPPoE lunas</Badge> : r.status ? <Badge tone={voucherStatus[r.status].tone}>{voucherStatus[r.status].label}</Badge> : '—'}</td>
+                      <td>{r.channel === 'reseller' ? <Badge tone="amber">Dibeli reseller</Badge> : r.channel === 'pppoe' ? <Badge tone="blue">PPPoE lunas</Badge> : r.status ? <Badge tone={voucherStatus[r.status].tone}>{voucherStatus[r.status].label}</Badge> : '—'}</td>
                       <td className="text-right font-bold">{rupiah(r.amount)}</td>
                     </tr>
                   ))}

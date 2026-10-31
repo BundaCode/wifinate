@@ -5,7 +5,7 @@ export interface SalesFilter {
   to: number;
   routerId?: number;
   packageId?: number;
-  channel?: 'hotspot' | 'pppoe';
+  channel?: 'hotspot' | 'pppoe' | 'reseller';
   /** Zona waktu offset menit dari klien (mis. WIB = 420) supaya pengelompokan per hari tepat. */
   tzOffsetMin: number;
   granularity: 'hour' | 'day' | 'month';
@@ -49,13 +49,14 @@ export function salesSummary(f: SalesFilter) {
   ).all(p) as { bucket: string; revenue: number; count: number }[];
 
   const byPackage = sqlite.prepare(
-    `SELECT s.channel || '-' || s.package_id AS packageId, s.channel AS channel,
+    `SELECT (CASE WHEN s.channel = 'pppoe' THEN 'pppoe' ELSE 'hotspot' END) || '-' || s.package_id AS packageId,
+            (CASE WHEN s.channel = 'pppoe' THEN 'pppoe' ELSE 'hotspot' END) AS channel,
             COALESCE(p.name, pp.name, 'Paket terhapus') AS name, COALESCE(p.color, pp.color, '#94a3b8') AS color,
             SUM(s.amount) AS revenue, COUNT(*) AS count
        FROM sales s
-       LEFT JOIN packages p ON p.id = s.package_id AND s.channel = 'hotspot'
+       LEFT JOIN packages p ON p.id = s.package_id AND s.channel IN ('hotspot', 'reseller')
        LEFT JOIN ppp_plans pp ON pp.id = s.package_id AND s.channel = 'pppoe'
-      WHERE ${w} GROUP BY s.channel, s.package_id ORDER BY revenue DESC`,
+      WHERE ${w} GROUP BY (s.channel = 'pppoe'), s.package_id ORDER BY revenue DESC`,
   ).all(p) as { packageId: string; channel: string; name: string; color: string; revenue: number; count: number }[];
 
   const byChannel = sqlite.prepare(
@@ -94,18 +95,19 @@ export function salesSummary(f: SalesFilter) {
 
 export function salesRows(f: SalesFilter & { page: number; pageSize: number; search?: string }) {
   const p = { ...params(f), search: f.search ? `%${f.search}%` : null, limit: f.pageSize, offset: (f.page - 1) * f.pageSize };
-  const w = `${where(f)} ${f.search ? 'AND (v.code LIKE @search OR v.last_mac LIKE @search OR c.name LIKE @search OR c.username LIKE @search)' : ''}`;
+  const w = `${where(f)} ${f.search ? 'AND (v.code LIKE @search OR v.last_mac LIKE @search OR c.name LIKE @search OR c.username LIKE @search OR u.name LIKE @search)' : ''}`;
   const base = `FROM sales s
       LEFT JOIN vouchers v ON v.id = s.voucher_id
       LEFT JOIN customers c ON c.id = s.customer_id
-      LEFT JOIN packages p ON p.id = s.package_id AND s.channel = 'hotspot'
+      LEFT JOIN users u ON u.id = s.user_id AND s.channel = 'reseller'
+      LEFT JOIN packages p ON p.id = s.package_id AND s.channel IN ('hotspot', 'reseller')
       LEFT JOIN ppp_plans pp ON pp.id = s.package_id AND s.channel = 'pppoe'
       LEFT JOIN routers r ON r.id = s.router_id
       WHERE ${w}`;
   const total = (sqlite.prepare(`SELECT COUNT(*) AS n ${base}`).get(p) as { n: number }).n;
   const rows = sqlite.prepare(
     `SELECT s.id, s.sold_at AS soldAt, s.amount, s.channel, COALESCE(v.code, c.username) AS code, v.status, v.last_mac AS mac,
-            c.name AS customerName,
+            COALESCE(c.name, u.name) AS customerName,
             COALESCE(p.name, pp.name, 'Paket terhapus') AS packageName, COALESCE(p.color, pp.color, '#94a3b8') AS packageColor,
             COALESCE(r.name, 'Router terhapus') AS routerName
        ${base} ORDER BY s.sold_at DESC LIMIT @limit OFFSET @offset`,

@@ -1,21 +1,40 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import { count, eq } from 'drizzle-orm';
+import { count, eq, ne } from 'drizzle-orm';
 import { z } from 'zod';
 import { db, schema } from '../db.js';
 import { hashPassword, verifyPassword } from '../crypto.js';
 import { saveSettings } from '../services/settings.js';
 
-export interface AuthUser { id: number; username: string; name: string; role: 'admin' | 'kasir' }
+export interface AuthUser { id: number; username: string; name: string; role: 'admin' | 'kasir' | 'reseller' }
 
 declare module '@fastify/jwt' {
   interface FastifyJWT { payload: AuthUser; user: AuthUser }
 }
+
+/** Endpoint yang boleh dipakai reseller. Selain ini ditolak, apa pun route-nya. */
+const RESELLER_ALLOWED: [string, RegExp][] = [
+  ['GET', /^\/api\/auth\/me$/],
+  ['GET', /^\/api\/reseller\/me$/],
+  ['GET', /^\/api\/packages$/],
+  ['GET', /^\/api\/routers$/],
+  ['GET', /^\/api\/batches$/],
+  ['POST', /^\/api\/vouchers\/generate$/],
+  ['GET', /^\/api\/vouchers\/print$/],
+];
 
 export async function requireAuth(req: FastifyRequest, reply: FastifyReply) {
   try {
     await req.jwtVerify();
   } catch {
     return reply.code(401).send({ message: 'Sesi berakhir, silakan login kembali.' });
+  }
+  if (req.user.role === 'reseller') {
+    const path = req.url.split('?')[0];
+    if (!RESELLER_ALLOWED.some(([m, re]) => m === req.method && re.test(path))) {
+      return reply.code(403).send({ message: 'Akun reseller tidak boleh mengakses ini.' });
+    }
+    const u = db.select({ active: schema.users.active }).from(schema.users).where(eq(schema.users.id, req.user.id)).get();
+    if (!u?.active) return reply.code(401).send({ message: 'Akun reseller dinonaktifkan. Hubungi pemilik.' });
   }
 }
 
@@ -55,6 +74,7 @@ export default async function authRoutes(app: FastifyInstance) {
     if (!user || !verifyPassword(body.password, user.passwordHash)) {
       return reply.code(401).send({ message: 'Username atau password salah.' });
     }
+    if (!user.active) return reply.code(403).send({ message: 'Akun ini dinonaktifkan. Hubungi pemilik.' });
     const payload: AuthUser = { id: user.id, username: user.username, name: user.name, role: user.role };
     return { token: app.jwt.sign(payload, { expiresIn: '30d' }), user: payload };
   });
@@ -64,7 +84,7 @@ export default async function authRoutes(app: FastifyInstance) {
   // ----- Manajemen user (admin & kasir) -----
   app.get('/api/users', { preHandler: [requireAuth, requireAdmin] }, async () =>
     db.select({ id: schema.users.id, username: schema.users.username, name: schema.users.name, role: schema.users.role, createdAt: schema.users.createdAt })
-      .from(schema.users).all());
+      .from(schema.users).where(ne(schema.users.role, 'reseller')).all());
 
   app.post('/api/users', { preHandler: [requireAuth, requireAdmin] }, async (req, reply) => {
     const body = z.object({

@@ -16,7 +16,7 @@ interface DashboardData {
   last7: { bucket: string; revenue: number; count: number }[];
   counts: Record<string, number>;
   routers: { id: number; name: string; lastStatus: string; lastError: string | null; isDemo: boolean; lastSeenAt: number | null }[];
-  recent: { id: number; amount: number; soldAt: number; code: string | null; packageName: string | null; color: string | null; channel: string; customerName: string | null }[];
+  recent: { id: number; amount: number; soldAt: number; code: string | null; packageName: string | null; color: string | null; channel: string; customerName: string | null; resellerName: string | null }[];
   packagesCount: number;
   ppp: { active: number; isolated: number; overdue: number; overdueCustomers: number };
 }
@@ -171,7 +171,7 @@ export default function Dashboard() {
                     <span className="size-2 rounded-full" style={{ background: s.color ?? '#94a3b8' }} />
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-semibold">
-                        {s.channel === 'pppoe' ? <>Bayar PPPoE <span className="text-xs font-normal text-muted">{s.customerName}</span></> : <>{s.packageName ?? 'Paket'} <span className="font-mono text-xs text-muted">{s.code}</span></>}
+                        {s.channel === 'reseller' ? <>Reseller beli {s.packageName} <span className="text-xs font-normal text-muted">{s.resellerName}</span></> : s.channel === 'pppoe' ? <>Bayar PPPoE <span className="text-xs font-normal text-muted">{s.customerName}</span></> : <>{s.packageName ?? 'Paket'} <span className="font-mono text-xs text-muted">{s.code}</span></>}
                       </p>
                       <p className="text-xs text-muted">{relative(s.soldAt)}</p>
                     </div>

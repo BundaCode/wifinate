@@ -51,9 +51,12 @@ export async function syncRouter(router: typeof schema.routers.$inferSelect) {
             status: 'active', activatedAt, expiresAt, uptimeSec, bytesTotal: bytes,
             lastMac: sess?.mac ?? v.lastMac, lastIp: sess?.address ?? v.lastIp,
           }).where(eq(schema.vouchers.id, v.id)).run();
-          db.insert(schema.sales).values({
-            voucherId: v.id, routerId: router.id, packageId: v.packageId, amount: v.price, channel: 'hotspot', soldAt: activatedAt,
-          }).run();
+          // Voucher reseller sudah dicatat saat dibeli reseller.
+          if (!v.resellerId) {
+            db.insert(schema.sales).values({
+              voucherId: v.id, routerId: router.id, packageId: v.packageId, amount: v.price, channel: 'hotspot', soldAt: activatedAt,
+            }).run();
+          }
           continue;
         }
 

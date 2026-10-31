@@ -14,6 +14,8 @@ const Vouchers = lazy(() => import('./pages/Vouchers'));
 const Packages = lazy(() => import('./pages/Packages'));
 const Customers = lazy(() => import('./pages/Customers'));
 const Office = lazy(() => import('./pages/Office'));
+const Resellers = lazy(() => import('./pages/Resellers'));
+const ResellerHome = lazy(() => import('./pages/ResellerHome'));
 const Monitor = lazy(() => import('./pages/Monitor'));
 const Reports = lazy(() => import('./pages/Reports'));
 const Routers = lazy(() => import('./pages/Routers'));
@@ -31,6 +33,18 @@ function AppRoutes() {
   const { user, loading } = useAuth();
   if (loading) return <FullSpinner />;
   if (!user) return <LoginPage />;
+  if (user.role === 'reseller') {
+    return (
+      <Suspense fallback={<FullSpinner />}>
+        <Routes>
+          <Route element={<Layout />}>
+            <Route index element={<ResellerHome />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Route>
+        </Routes>
+      </Suspense>
+    );
+  }
   return (
     <Suspense fallback={<FullSpinner />}>
       <Routes>
@@ -41,6 +55,7 @@ function AppRoutes() {
           <Route path="pelanggan" element={<Customers />} />
           <Route path="monitor" element={<Monitor />} />
           <Route path="laporan" element={<Reports />} />
+          {user.role === 'admin' && <Route path="reseller" element={<Resellers />} />}
           {user.role === 'admin' && <Route path="kantor" element={<Office />} />}
           {user.role === 'admin' && <Route path="router" element={<Routers />} />}
           {user.role === 'admin' && <Route path="pengaturan" element={<SettingsPage />} />}

@@ -12,7 +12,7 @@ import { Badge, Button, EmptyState, Field, Input, Modal, PageHeader, Pagination,
 
 const QUICK = [10, 20, 40, 100, 200];
 
-function GenerateModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function GenerateModal({ open, onClose, reseller }: { open: boolean; onClose: () => void; reseller?: { balance: number; discountPct: number } }) {
   const qc = useQueryClient();
   const routers = useRouters();
   const packages = usePackages();
@@ -25,6 +25,8 @@ function GenerateModal({ open, onClose }: { open: boolean; onClose: () => void }
   const rid = routerId || routers.data?.[0]?.id || '';
   const pid = packageId || pk[0]?.id || '';
   const selected = pk.find((p) => p.id === pid);
+  const cost = selected && reseller ? Math.round((selected.price * count * (100 - reseller.discountPct)) / 100) : 0;
+  const notEnough = !!reseller && cost > reseller.balance;
 
   const gen = useMutation({
     mutationFn: () => api<{ id: number; count: number }>('/vouchers/generate', { method: 'POST', json: { routerId: rid, packageId: pid, count, note: note || undefined } }),
@@ -33,6 +35,7 @@ function GenerateModal({ open, onClose }: { open: boolean; onClose: () => void }
       qc.invalidateQueries({ queryKey: ['vouchers'] });
       qc.invalidateQueries({ queryKey: ['batches'] });
       qc.invalidateQueries({ queryKey: ['packages'] });
+      qc.invalidateQueries({ queryKey: ['reseller-me'] });
     },
     onError: (e) => toast.error(e.message),
   });
@@ -46,7 +49,7 @@ function GenerateModal({ open, onClose }: { open: boolean; onClose: () => void }
     <Modal open={open} onClose={close} title={result ? 'Voucher siap!' : 'Buat voucher'} description={result ? undefined : 'Voucher langsung dikirim ke router dan siap dicetak.'}
       footer={result
         ? <><Button variant="secondary" onClick={() => setResult(null)}>Buat lagi</Button><Button icon={Printer} onClick={print}>Cetak PDF</Button></>
-        : !missing && <><Button variant="secondary" onClick={close}>Batal</Button><Button icon={Wand2} loading={gen.isPending} onClick={() => gen.mutate()} disabled={!rid || !pid || count < 1}>Buat {count} voucher</Button></>}
+        : !missing && <><Button variant="secondary" onClick={close}>Batal</Button><Button icon={Wand2} loading={gen.isPending} onClick={() => gen.mutate()} disabled={!rid || !pid || count < 1 || notEnough}>Buat {count} voucher</Button></>}
     >
       {result ? (
         <div className="flex flex-col items-center py-6 text-center">
@@ -92,9 +95,18 @@ function GenerateModal({ open, onClose }: { open: boolean; onClose: () => void }
           <Field label="Catatan" hint="Opsional, misal: “Titip warung Bu Sari”.">
             <Input value={note} onChange={(e) => setNote(e.target.value)} maxLength={100} />
           </Field>
-          {selected && (
+          {selected && !reseller && (
             <div className="rounded-xl bg-[var(--surface-2)] p-4 text-sm">
               Nilai jual: <b>{rupiah(selected.price * count)}</b> ({count} × {rupiah(selected.price)})
+            </div>
+          )}
+          {selected && reseller && (
+            <div className={clsx('space-y-1.5 rounded-xl p-4 text-sm', notEnough ? 'bg-rose-500/10' : 'bg-[var(--surface-2)]')}>
+              <div className="flex justify-between"><span className="text-muted">Harga jual ke pelanggan</span><span>{rupiah(selected.price * count)}</span></div>
+              <div className="flex justify-between"><span className="text-muted">Diskon reseller {reseller.discountPct}%</span><span className="text-emerald-600">−{rupiah(selected.price * count - cost)}</span></div>
+              <div className="flex justify-between border-t pt-1.5 font-bold"><span>Dipotong dari saldo</span><span>{rupiah(cost)}</span></div>
+              <div className="flex justify-between text-xs"><span className="text-muted">Saldo Anda</span><span className={clsx(notEnough && 'font-bold text-rose-600')}>{rupiah(reseller.balance)}</span></div>
+              {notEnough && <p className="pt-1 font-semibold text-rose-600">Saldo tidak cukup. Kurangi jumlah voucher atau minta isi saldo ke pemilik.</p>}
             </div>
           )}
         </div>
@@ -173,6 +185,7 @@ export default function Vouchers() {
                     <div className="min-w-0 flex-1">
                       <p className="font-bold">{b.packageName} <span className="font-normal text-muted">× {b.count}</span></p>
                       <p className="text-xs text-muted">{dateTime(b.createdAt)} • {b.routerName}{b.note ? ` • ${b.note}` : ''}</p>
+                      {b.resellerName && <p className="mt-1"><Badge tone="amber">Reseller: {b.resellerName}</Badge></p>}
                     </div>
                     <div className="text-right">
                       <p className="text-sm font-semibold">{b.unused} belum dipakai</p>

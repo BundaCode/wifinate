@@ -3,7 +3,7 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import clsx from 'clsx';
 import {
   LayoutDashboard, Ticket, Package as PackageIcon, Activity, BarChart3, Router as RouterIcon, Settings,
-  LogOut, Moon, Sun, Menu, X, Wifi, Users, Building2,
+  LogOut, Moon, Sun, Menu, X, Wifi, Users, Building2, Store,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { useTheme } from '@/lib/theme';
@@ -15,6 +15,7 @@ const nav = [
   { to: '/paket', label: 'Paket Voucher', icon: PackageIcon },
   { to: '/monitor', label: 'Monitor', icon: Activity, mobile: true },
   { to: '/laporan', label: 'Laporan', icon: BarChart3, mobile: true },
+  { to: '/reseller', label: 'Reseller', icon: Store, admin: true },
   { to: '/kantor', label: 'Jaringan Kantor', icon: Building2, admin: true },
   { to: '/router', label: 'Router', icon: RouterIcon, admin: true },
   { to: '/pengaturan', label: 'Pengaturan', icon: Settings, admin: true },
@@ -36,7 +37,9 @@ export default function Layout() {
   const { dark, toggle } = useTheme();
   const [open, setOpen] = useState(false);
   const loc = useLocation();
-  const items = nav.filter((n) => !n.admin || user?.role === 'admin');
+  const items = user?.role === 'reseller'
+    ? [{ to: '/', label: 'Beranda', icon: LayoutDashboard, end: true, mobile: false }]
+    : nav.filter((n) => !n.admin || user?.role === 'admin');
 
   const sidebar = (
     <div className="flex h-full flex-col">
@@ -102,7 +105,7 @@ export default function Layout() {
       </main>
 
       {/* Navigasi bawah untuk HP */}
-      <nav className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-5 border-t bg-[var(--surface)]/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl lg:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-5 empty:hidden border-t bg-[var(--surface)]/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl lg:hidden">
         {items.filter((n) => n.mobile).map(({ to, label, icon: Icon, end }) => (
           <NavLink key={to} to={to} end={end} className={({ isActive }) => clsx('flex flex-col items-center gap-1 py-2.5 text-[11px] font-semibold', isActive ? 'text-brand-600' : 'text-muted')}>
             <Icon className="size-5" />

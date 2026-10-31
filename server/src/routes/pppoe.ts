@@ -202,7 +202,10 @@ export async function trafficWs(app: FastifyInstance) {
     // Token dikirim lewat query karena browser tidak bisa set header di WebSocket.
     const q = req.query as { token?: string; routerId?: string; iface?: string };
     let stopped = false;
-    try { app.jwt.verify(q.token ?? ''); } catch {
+    try {
+      const u = app.jwt.verify<{ role: string }>(q.token ?? '');
+      if (u.role === 'reseller') throw new Error('forbidden');
+    } catch {
       socket.send(JSON.stringify({ error: 'Sesi berakhir, silakan login kembali.' }));
       socket.close();
       return;

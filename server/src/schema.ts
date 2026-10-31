@@ -5,7 +5,12 @@ export const users = sqliteTable('users', {
   username: text('username').notNull().unique(),
   name: text('name').notNull(),
   passwordHash: text('password_hash').notNull(),
-  role: text('role', { enum: ['admin', 'kasir'] }).notNull().default('admin'),
+  role: text('role', { enum: ['admin', 'kasir', 'reseller'] }).notNull().default('admin'),
+  /** Khusus reseller: saldo deposit (Rp), diskon (%), kontak, status aktif. */
+  balance: integer('balance').notNull().default(0),
+  discountPct: integer('discount_pct').notNull().default(0),
+  phone: text('phone'),
+  active: integer('active', { mode: 'boolean' }).notNull().default(true),
   createdAt: integer('created_at').notNull(),
 });
 
@@ -61,6 +66,9 @@ export const voucherBatches = sqliteTable('voucher_batches', {
   count: integer('count').notNull(),
   note: text('note'),
   createdBy: integer('created_by'),
+  /** Diisi jika dibeli reseller: id reseller & total yang dibayar dari saldo. */
+  resellerId: integer('reseller_id'),
+  cost: integer('cost'),
   createdAt: integer('created_at').notNull(),
 });
 
@@ -82,6 +90,7 @@ export const vouchers = sqliteTable('vouchers', {
   lastIp: text('last_ip'),
   uptimeSec: integer('uptime_sec').notNull().default(0),
   bytesTotal: real('bytes_total').notNull().default(0),
+  resellerId: integer('reseller_id'),
 });
 
 export const sales = sqliteTable('sales', {
@@ -92,7 +101,7 @@ export const sales = sqliteTable('sales', {
   amount: integer('amount').notNull(),
   /** Siapa yang membuat voucher (kasir/admin). */
   userId: integer('user_id'),
-  channel: text('channel', { enum: ['hotspot', 'pppoe'] }).notNull().default('hotspot'),
+  channel: text('channel', { enum: ['hotspot', 'pppoe', 'reseller'] }).notNull().default('hotspot'),
   customerId: integer('customer_id'),
   invoiceId: integer('invoice_id'),
   soldAt: integer('sold_at').notNull(),
@@ -163,5 +172,20 @@ export const lanNetworks = sqliteTable('lan_networks', {
   rateDown: text('rate_down'),
   rateUp: text('rate_up'),
   isolate: integer('isolate', { mode: 'boolean' }).notNull().default(false),
+  createdAt: integer('created_at').notNull(),
+});
+
+// ---------- Reseller (tahap 3) ----------
+
+export const resellerLedger = sqliteTable('reseller_ledger', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  userId: integer('user_id').notNull(),
+  type: text('type', { enum: ['topup', 'purchase', 'refund', 'adjust'] }).notNull(),
+  /** Positif = saldo bertambah, negatif = berkurang. */
+  amount: integer('amount').notNull(),
+  balanceAfter: integer('balance_after').notNull(),
+  note: text('note'),
+  batchId: integer('batch_id'),
+  createdBy: integer('created_by'),
   createdAt: integer('created_at').notNull(),
 });

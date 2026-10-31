@@ -98,8 +98,16 @@ Menu **Jaringan Kantor → Buat jaringan kantor**:
 Setiap item di router diberi komentar `wifinate:lan:<divisi>`, sehingga **Hapus divisi** membersihkan semuanya dengan rapi.
 Catatan: RouterOS API tidak mendukung *Safe Mode* Winbox; sebagai gantinya Wifinate memakai backup + pembatalan otomatis.
 
+## Reseller (Tahap 3 — sudah tersedia)
+
+1. Admin: **Reseller → Reseller baru** (nama toko, WA, username, password, diskon %, saldo awal).
+2. Admin: **Isi saldo** saat reseller transfer/bayar tunai (bisa kirim konfirmasi WA). Salah input → **Koreksi**.
+3. Reseller login → melihat saldo, **harga khusus** per paket & untungnya → **Beli voucher** → cetak PDF.
+   Saldo dipotong `harga × jumlah × (100% − diskon)`. Saldo tidak cukup → ditolak dengan pesan jelas.
+4. Pembukuan: pendapatan dicatat **saat reseller membeli** (kanal *Reseller* di laporan). Saat voucher reseller dipakai pelanggan, tidak dicatat lagi (tidak dobel).
+5. Keamanan: akun reseller hanya bisa mengakses saldo, paket, beli & cetak voucher **miliknya sendiri**.
+
 ## Rencana tahap berikutnya
 
 ### Tahap 3 — Jaringan kantor & multi-lokasi
-- Akun reseller dengan saldo deposit.
 - Notifikasi WhatsApp (stok voucher menipis, router offline).
