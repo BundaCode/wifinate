@@ -124,22 +124,16 @@ Buka website apa saja di laptop. Jika bisa, lanjut. Jika tidak, lihat [bagian 13
 
 1. Pasang **Node.js** (klik Next sampai selesai).
 2. Ekstrak ZIP Wifinate, mis. ke `Documents\Project\wifinate-main`.
-3. Buka folder itu → klik kanan di area kosong → **Open in Terminal** (atau buka PowerShell lalu `cd` ke folder tersebut).
-4. Jalankan (sekali saja):
-   ```
-   npm install
-   ```
-5. Jalankan Wifinate:
-   ```
-   npm start
-   ```
-   Tunggu sampai muncul: `Wifinate siap di http://localhost:8080`.
-6. Buka browser → **http://localhost:8080**.
-7. Isi **nama usaha, nama Anda, username, password** → **Buat akun & mulai**.
+3. Buka folder itu → **klik dua kali `Jalankan-Wifinate.bat`**.
+   - Pertama kali akan memasang & membangun aplikasi (±2–3 menit). Tunggu saja.
+   - Browser terbuka otomatis ke **http://localhost:8080**.
+   - Jika Windows menampilkan *"Windows protected your PC"*, klik **More info → Run anyway**.
+   - Jika Windows Firewall bertanya, pilih **Allow / Izinkan** (jaringan Private).
+4. Isi **nama usaha, nama Anda, username, password** → **Buat akun & mulai**.
+5. Supaya Wifinate **otomatis jalan setiap komputer dinyalakan**: klik dua kali **`Pasang-Otomatis-Startup.bat`** (cukup sekali).
+   Untuk membatalkan: **`Hapus-Otomatis-Startup.bat`**.
 
-> Jangan tutup jendela PowerShell selama Wifinate dipakai. Masa aktif voucher diurus oleh Wifinate, jadi **laptop/PC sebaiknya menyala terus**.
-
----
+> Jendela hitam **Wifinate** jangan ditutup — boleh diperkecil. Masa aktif voucher diurus oleh Wifinate, jadi **laptop/PC sebaiknya menyala terus**.
 
 ## 6. Hubungkan router ke Wifinate
 
@@ -244,7 +238,7 @@ Tips: aktifkan **Pengaturan → Notifikasi WhatsApp** supaya dapat kabar saat ro
 | Halaman login tidak muncul | Buka **login.wifi** atau **http://10.5.50.1** di browser HP. |
 | Sudah login tapi **tidak bisa internet** | Cek internet dari laptop (ether2). Jika laptop juga tidak bisa, masalah di modem/ISP. |
 | Voucher tidak berubah **Aktif** | Wifinate harus terus berjalan (jendela PowerShell jangan ditutup). Status router di **Beranda** harus **Online**. |
-| Laptop mati/restart | Buka PowerShell di folder Wifinate → `npm start`. Agar otomatis, lihat bagian *pm2* di README. |
-| Lupa password Wifinate | Belum ada reset otomatis. Jika masih uji coba: hentikan Wifinate (Ctrl+C), hapus folder `server\data`, `npm start` lagi (**semua data terhapus**). |
+| Laptop mati/restart | Klik dua kali `Jalankan-Wifinate.bat`. Agar otomatis, jalankan sekali `Pasang-Otomatis-Startup.bat`. |
+| Lupa password Wifinate | Belum ada reset otomatis. Jika masih uji coba: tutup jendela Wifinate, hapus folder `server\data`, jalankan lagi (**semua data terhapus**). |
 
 Masih bingung? Catat **pesan error** yang muncul (atau screenshot), lalu tanyakan.

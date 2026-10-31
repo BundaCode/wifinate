@@ -1,0 +1,2 @@
+# File .bat wajib berakhiran baris Windows (CRLF) agar berjalan benar
+*.bat text eol=crlf

@@ -61,10 +61,17 @@ npm run dev
 - Web: http://localhost:5173 (otomatis meneruskan `/api` ke server)
 - Server API: http://localhost:8080
 
-### Tanpa Docker (Windows / Linux / macOS)
+### Windows: cukup klik dua kali
 
 Butuh **Node.js 22.16 atau lebih baru** ([nodejs.org](https://nodejs.org), pilih versi LTS).
-Buka terminal (Windows: PowerShell) di folder proyek, lalu:
+
+| File | Fungsi |
+|---|---|
+| **`Jalankan-Wifinate.bat`** | Menjalankan Wifinate. Pertama kali otomatis memasang & membangun aplikasi, lalu membuka browser ke `http://localhost:8080`. Menyala ulang sendiri jika berhenti. **Jangan tutup jendelanya** selama dipakai. |
+| **`Pasang-Otomatis-Startup.bat`** | Wifinate berjalan otomatis (jendela diperkecil) setiap kali Windows dinyalakan. |
+| **`Hapus-Otomatis-Startup.bat`** | Membatalkan jalan otomatis saat Windows menyala. |
+
+### Lewat terminal (Windows / Linux / macOS)
 
 ```bash
 npm install
@@ -73,6 +80,7 @@ npm start
 
 `npm start` otomatis membangun aplikasi saat pertama kali (±1 menit), lalu menjalankannya.
 Buka `http://localhost:8080` di browser. Data tersimpan di folder `server/data`.
+`npm run dev` hanya untuk mengubah kode (programmer), tidak perlu untuk pemakaian sehari-hari.
 
 Setelah memperbarui kode (mis. unduh versi baru), bangun ulang dengan:
 
@@ -80,12 +88,13 @@ Setelah memperbarui kode (mis. unduh versi baru), bangun ulang dengan:
 npm run build
 ```
 
-Agar tetap jalan setelah terminal ditutup / komputer restart, gunakan pengelola proses, contoh `pm2`:
+Linux/macOS: agar tetap jalan di latar belakang & setelah restart, gunakan `pm2`:
 
 ```bash
 npm install -g pm2
 pm2 start scripts/start.mjs --name wifinate
 pm2 save
+pm2 startup
 ```
 
 ## Persiapan di MikroTik
