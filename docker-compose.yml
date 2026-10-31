@@ -1,0 +1,11 @@
+services:
+  wifinate:
+    build: .
+    container_name: wifinate
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/data
+    environment:
+      - TZ=Asia/Jakarta
